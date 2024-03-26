@@ -3,23 +3,25 @@ import os
 import pandas as pd
 import talib
 from datetime import datetime, timedelta
+import access
 
 """Assess the raw data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
-def load_raw_data(path):
-    """Load raw dataset located at path"""
-    df = pd.read_csv(path)
-    df = generate_features(df)
-    df.index = df.index.tz_localize(None)
-    return
 
-def preprocess(raw_path, preprocessed_path):
+def load_csv_to_df(path):
+    """Load a stock historical price csv to a DataFrame with appropriate date index"""
+    df = pd.read_csv(path, index_col=0)
+    df.index = pd.to_datetime(df.index, utc=True)
+    df.index = df.index.tz_localize(None)
+    return df
+
+def preprocess(raw_path, processed_path):
     for file in os.listdir(raw_path):
-        print(file)
+        df = load_csv_to_df(os.path.join(raw_path, file))
+        df = generate_features(df)
+        df.to_csv(os.path.join(processed_path, file), index=True, header=True)
 
 def generate_features(df):
-    """Generate features from data DataFrame."""
-
     # Labels
     df["Close Forecast"] = df["Close"].shift(-1)
 
@@ -73,7 +75,8 @@ def generate_features(df):
     df['weekofyear'] = df.index.isocalendar().week
 
     # Index-prices
-    df["S&P Close"] = access.data("^spx", start=df.index[0], end=df.index[-1])["Close"]
+    sp_close = load_csv_to_df("/Users/simon/Documents/II/Dissertation/data/external/^SPX.csv")["Close"]
+    df["S&P Close"] = sp_close
 
     return df
 
@@ -82,15 +85,11 @@ def view(data):
 
     raise NotImplementedError
 
-def labelled(data):
-    """Provide a labelled set of data ready for supervised learning."""
-    raise NotImplementedError
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Preprocess dataset")
     parser.add_argument("-r", "--raw-path", help="Raw data path", required=True)
-    parser.add_argument("-p", "--preprocessed-path", help="Preprocessed data path", required=True)
+    parser.add_argument("-p", "--processed-path", help="Processed data path", required=True)
     args = parser.parse_args()
 
-    preprocess(args.raw_path, args.preprocessed_path)
+    preprocess(args.raw_path, args.processed_path)

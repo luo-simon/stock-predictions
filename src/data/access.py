@@ -11,6 +11,11 @@ def download_raw_data(ticker, path):
     df = stock.history(period="max")
     df.to_csv(os.path.join(path, f"{ticker.upper()}.csv"), index=True, header=True)
 
+def data(ticker="aapl", start=datetime(2018,1,1), end=datetime(2023,1,1)):
+    """Get stock data within a specified date range"""
+    print(ticker, start, end)
+    stock = yf.Ticker(ticker)
+    return stock.history(start=start, end=end)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Download dataset")
