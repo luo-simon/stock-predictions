@@ -5,12 +5,12 @@ import os.path
 import yfinance as yf
 from datetime import datetime
 
-def download_raw_data(ticker="aapl", start=datetime(2018,1,1), end=datetime(2023,1,1), path=''):
-    """Read the data from the web or local file, returning structured format such as a data frame"""
+def download_raw_data(ticker="aapl", path=''):
+    """Calls yfinance API to retrieve desired data and stores as .csv file"""
     stock = yf.Ticker(ticker)
-    df = stock.history(start=start, end=end)
-    df.to_csv(os.path.join(path, 'train.csv'), index=False, header=False)
-
+    df = stock.history(period="max")
+    df.to_csv(os.path.join(path, f"{ticker.upper()}.csv"), index=True, header=True)
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Download dataset")
