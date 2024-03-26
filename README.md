@@ -6,9 +6,9 @@
 ### Data Pipeline
 Collect data (access)
 Preprocessing (assess)
-Filling missing values
-Validation
-    Data analytics/visualization
+- Filling missing values
+- Validation
+- Data analytics/visualization
 Data Splitting  
 Feature engineering
 Creating batches to feed into training

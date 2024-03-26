@@ -19,7 +19,15 @@ def preprocess(raw_path, processed_path):
     for file in os.listdir(raw_path):
         df = load_csv_to_df(os.path.join(raw_path, file))
         df = generate_features(df)
+
+        # Remove first 50 rows, as will be null for e.g. SMA_50 and final row, as no label
+        df = df.iloc[50:-1] 
+
+        # Ensure no missing values
+        assert df.isna().any(axis=1).sum() == 0
+
         df.to_csv(os.path.join(processed_path, file), index=True, header=True)
+
 
 def generate_features(df):
     # Labels
@@ -82,7 +90,6 @@ def generate_features(df):
 
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
-
     raise NotImplementedError
 
 
