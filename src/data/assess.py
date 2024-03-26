@@ -1,18 +1,21 @@
-import access
+import argparse
+import os
+import pandas as pd
 import talib
 from datetime import datetime, timedelta
 
-"""Place commands in this file to assess the data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Crete visualisation routines to assess the data (e.g. in bokeh). Ensure that date formats are correct and correctly timezoned."""
+"""Assess the raw data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
-def data(ticker="aapl", start=datetime(2018,1,1), end=datetime(2023,1,1)):
-    """Load the data from access and ensure missing values are correctly encoded as well as indices correct, column names informative, date and times correctly formatted. Return a structured data structure such as a data frame."""
-    start_pad = timedelta(days=80) # Pad so we have all TAs values for start of desired range (e.g. MA_50)
-    end_pad = timedelta(days=3)
-    df = access.data("aapl", start=start-start_pad, end=end+end_pad)
+def load_raw_data(path):
+    """Load raw dataset located at path"""
+    df = pd.read_csv(path)
     df = generate_features(df)
     df.index = df.index.tz_localize(None)
-    return df[start:end]
+    return
 
+def preprocess(raw_path, preprocessed_path):
+    for file in os.listdir(raw_path):
+        print(file)
 
 def generate_features(df):
     """Generate features from data DataFrame."""
@@ -82,3 +85,12 @@ def view(data):
 def labelled(data):
     """Provide a labelled set of data ready for supervised learning."""
     raise NotImplementedError
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Preprocess dataset")
+    parser.add_argument("-r", "--raw-path", help="Raw data path", required=True)
+    parser.add_argument("-p", "--preprocessed-path", help="Preprocessed data path", required=True)
+    args = parser.parse_args()
+
+    preprocess(args.raw_path, args.preprocessed_path)
