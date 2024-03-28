@@ -3,17 +3,10 @@ import os
 import pandas as pd
 import talib
 from datetime import datetime, timedelta
-import access
+from ..misc import load_csv_to_df
 
-"""Assess the raw data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
+"""Assess the raw data. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
-
-def load_csv_to_df(path):
-    """Load a stock historical price csv to a DataFrame with appropriate date index"""
-    df = pd.read_csv(path, index_col=0)
-    df.index = pd.to_datetime(df.index, utc=True)
-    df.index = df.index.tz_localize(None)
-    return df
 
 def preprocess(raw_path, processed_path):
     for file in os.listdir(raw_path):
@@ -32,6 +25,11 @@ def preprocess(raw_path, processed_path):
 def generate_features(df):
     # Labels
     df["Close Forecast"] = df["Close"].shift(-1)
+
+    # Close Price Lagged
+    df['Close_T-1'] = df['Close'].shift(1)  # Lag of 1 day
+    df['Close_T-2'] = df['Close'].shift(2)  # Lag of 2 days
+    df['Close_T-5'] = df['Close'].shift(5)  # Lag of 5 days
 
     # Simple Moving Average
     df['SMA_10'] = talib.SMA(df['Close'], timeperiod=10)
@@ -85,6 +83,8 @@ def generate_features(df):
     # Index-prices
     sp_close = load_csv_to_df("/Users/simon/Documents/II/Dissertation/data/external/^SPX.csv")["Close"]
     df["S&P Close"] = sp_close
+
+    
 
     return df
 

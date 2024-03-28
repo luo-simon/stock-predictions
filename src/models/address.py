@@ -68,26 +68,7 @@ def test_stationarity(timeseries):
     else:
         print("Weak evidence against null hypothesis, so cannot reject. Data is non-stationary.")
 
-def create_train_test_set(df, split=0.8, verbose=False):
-    features = df.drop(columns=['Close Forecast'], axis=1)
-    target = df['Close Forecast']
 
-    data_len = df.shape[0]
-
-    train_split = int(data_len * split)
-    test_split = int(data_len * (1-split))
-
-    X_train, X_test = features[:train_split], features[train_split:]
-    Y_train, Y_test = target[:train_split], target[train_split:]
-
-    if verbose:
-        print('Historical Stock Data length is - ', str(data_len))
-        print('Training Set length - ', str(train_split))
-        print('Test Set length - ', str(test_split))
-        print(X_train.shape, X_test.shape)
-        print(Y_train.shape, Y_test.shape)
-    
-    return X_train, X_test, Y_train, Y_test
 
 def evaluate(predicted, observed, verbose=False):
     r2 = r2_score(observed, predicted)
@@ -105,11 +86,7 @@ def evaluate(predicted, observed, verbose=False):
 
     return r2, mse, rmse, mae, mape
 
-def model_0(df, split=0.8):
-    X_train, X_test, Y_train, Y_test = create_train_test_set(df, split, verbose=False)
-    preds = X_test["Close"]
 
-    return preds, Y_test
 
 def model_1(df, split=0.8):
     """
@@ -285,16 +262,7 @@ def model_4(df, split=0.8):
 
     return preds, Y_test
     
-    
-def plot(preds, obs):
-    # Visualize the data
-    plt.figure(figsize=(16,6))
-    plt.title('Close Prices')
-    plt.xlabel('Date', fontsize=18)
-    plt.ylabel('Close Price USD ($)', fontsize=18)
-    plt.plot(obs)
-    plt.plot(preds)
-    plt.show()
+
 
 def trade(df, preds, verbose=True):
     res_df = df.loc[preds.index[0]:preds.index[-1]][["Open", "Close", "Close Forecast"]]
