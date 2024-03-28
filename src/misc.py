@@ -66,3 +66,4 @@ def evaluate(predicted, observed, verbose=False):
         print('MAPE: '+str(mape))
 
     return r2, mse, rmse, mae, mape
+
