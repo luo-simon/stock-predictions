@@ -22,7 +22,7 @@ splits into train test, and returns an evaluation of the model
 """
 
 import numpy as np
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import adfuller
 from pmdarima.arima import auto_arima
@@ -34,12 +34,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import xgboost as xgb
 
-def get_mape(y_true, y_pred): 
-    """
-    Compute mean absolute percentage error (MAPE)
-    """
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
 
 # Test for staionarity
 def test_stationarity(timeseries):
@@ -70,21 +65,7 @@ def test_stationarity(timeseries):
 
 
 
-def evaluate(predicted, observed, verbose=False):
-    r2 = r2_score(observed, predicted)
-    mse = mean_squared_error(observed, predicted)
-    rmse = np.sqrt(mean_squared_error(observed, predicted))
-    mae = mean_absolute_error(observed, predicted)
-    mape = get_mape(observed, predicted)
 
-    if verbose:
-        print("R^2: " + str(r2))
-        print('MSE: '+str(mse))
-        print('RMSE: '+str(rmse))
-        print('MAE: '+str(mae))
-        print('MAPE: '+str(mape))
-
-    return r2, mse, rmse, mae, mape
 
 
 
