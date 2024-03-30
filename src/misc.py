@@ -35,6 +35,25 @@ def create_train_test_set(df, split=0.8, verbose=False):
     
     return X_train, X_test, Y_train, Y_test
 
+def split_data(df, verbose=False):
+    """
+    Splits dataframe into train, validation and test set on an 80/10/10 ratio
+    """
+    total_samples = len(df)
+    train_split = int(total_samples * 0.8)
+    val_split = train_split + int(total_samples * 0.1)
+
+    train, val, test = df[:train_split], df[train_split:val_split], df[val_split:]
+
+    if verbose:
+        print(f"Original data length: {total_samples} ({df.iloc[0].index} - {df.iloc[-1].index})")
+        print(f"Train set length: {train_split}")
+        print(f"Validation set length: {val_split-train_split}")
+        print(f"Test set length: {total_samples-val_split}")
+        print(train.shape, val.shape, test.shape)
+
+    return train, val, test
+
 def plot(preds, obs):
     plt.figure(figsize=(16,6))
     plt.xlabel('Date', fontsize=18)

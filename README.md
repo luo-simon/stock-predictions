@@ -29,21 +29,17 @@ Creating batches to feed into training
 ├── data # Data from third party sources.
 ├── models          # Trained and serialized models.
 ├── notebooks       # Jupyter notebooks.
-├── figures         # Generated graphics and figures to be used in reporting.
 └── src              # Source code for use in this project.
-    ├── data         # Data engineering scripts.
-    │   ├── build_features.py
-    │   ├── cleaning.py
-    │   ├── ingestion.py
-    │   └── validation.py
+    ├── data         # Data engineering  scripts.
+    │   ├── access.py # get data
+        └── assess.py # clean data + feature engineering
     ├── models       # ML model engineering (a folder for each model).
-    │   └── model1
-    │       ├── dataloader.py
-    │       ├── hyperparameters_tuning.py
-    │       ├── model.py
-    │       ├── predict.py
-    │       ├── preprocessing.py
-    │       └── train.py
+    │   └── model1 
+    │       ├── hyperparameters_tuning.py # hyperparameter tuning
+    │       ├── model.py # model definition
+    │       ├── predict.py # predict
+    │       ├── preprocess.py # preprocess input data and data
+    │       └── train.py #train
     └── visualization # Scripts to create exploratory and results
         │             # oriented visualizations.
         ├── evaluation.py

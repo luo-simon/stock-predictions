@@ -1,0 +1,29 @@
+# Configuration file for model
+# ------------------------------
+# Data parameters
+model:
+   name : 'lstm'
+   input_dim: [28, 28, 1]
+   output_dim: 10
+
+data:
+  features: ["Open", "High", "Low", "Close", "Volume"]
+
+# Training parameters
+training:
+  batch_size: 64
+  num_epochs: 20
+  output_path  : 'models'
+
+# Logging and output parameters
+mlflow:
+  mlruns_path: 'models'
+  tracking_uri: 'http://localhost:8080'
+  experiment_name: 'lstm'
+  tags :
+    v1.2 : 'LSTM model for historical stock data'
+
+# Grid search:
+hyperparameter_tuning:
+  batch_size: [128, 256]
+  num_epochs: [10, 15, 20]
