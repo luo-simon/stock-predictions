@@ -3,27 +3,30 @@
 # Data parameters
 model:
    name : 'lstm'
-   input_dim: [28, 28, 1]
-   output_dim: 10
+   hidden_dim: 64
+   num_layers: 2
 
 data:
   features: ["Open", "High", "Low", "Close", "Volume"]
+  sequence_len: 60
 
 # Training parameters
 training:
   batch_size: 64
   num_epochs: 20
+  lr: 0.001
   output_path  : 'models'
 
 # Logging and output parameters
 mlflow:
   mlruns_path: 'models'
-  tracking_uri: 'http://localhost:8080'
+  tracking_uri: 'http://localhost:5000'
   experiment_name: 'lstm'
   tags :
-    v1.2 : 'LSTM model for historical stock data'
+    state : "dev"
 
 # Grid search:
 hyperparameter_tuning:
-  batch_size: [128, 256]
-  num_epochs: [10, 15, 20]
+  batch_size: [64, 128, 256]
+  num_epochs: [10, 20, 50]
+  lr: [0.001, 0.01, 0.1]

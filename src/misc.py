@@ -41,12 +41,12 @@ def split_data(df, verbose=False):
     """
     total_samples = len(df)
     train_split = int(total_samples * 0.8)
-    val_split = train_split + int(total_samples * 0.1)
+    val_split = int(total_samples * 0.9)
 
     train, val, test = df[:train_split], df[train_split:val_split], df[val_split:]
 
     if verbose:
-        print(f"Original data length: {total_samples} ({df.iloc[0].index} - {df.iloc[-1].index})")
+        print(f"Original data length: {total_samples}")
         print(f"Train set length: {train_split}")
         print(f"Validation set length: {val_split-train_split}")
         print(f"Test set length: {total_samples-val_split}")
