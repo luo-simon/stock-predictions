@@ -15,6 +15,7 @@ def fetch_logged_data(run_id):
     artifacts = [f.path for f in client.list_artifacts(run_id, "model")]
     return data.params, data.metrics, tags, artifacts
 
+
 def train():
     # Enable MLflow autologging
     mlflow.set_tracking_uri("http://127.0.0.1:5000/")
@@ -39,18 +40,14 @@ def train():
     r2, mse, rmse, mae, mape = evaluate(preds, y_test)
 
     # Log the metrics
-    mlflow.log_metrics({
-        "r2": r2,
-        "mse": mse,
-        "rmse": rmse,
-        "mae": mae,
-        "mape": mape
-    }) # type: ignore
+    mlflow.log_metrics(
+        {"r2": r2, "mse": mse, "rmse": rmse, "mae": mae, "mape": mape}
+    )  # type: ignore
 
     # Save model:
     signature = infer_signature(X_test, preds)
     mlflow.sklearn.log_model(model, "models", signature=signature)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     train()

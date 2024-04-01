@@ -5,10 +5,11 @@ from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 import mlflow
 
-# TODO: 
+# TODO:
 # - fix up training loop (use X_train appropriately)
 # - create config, and put in model params
 # - separate out train and eval files
+
 
 def train():
     # # Enable MLflow autologging
@@ -25,12 +26,12 @@ def train():
         preds = []
         model = LinearRegression(fit_intercept=True)
         for i in range(int(len(X) * 0.9), len(X)):
-            model.fit(X.iloc[i-N:i], y.iloc[i-N:i])
-            pred = model.predict(X.iloc[i:i+1])
+            model.fit(X.iloc[i - N : i], y.iloc[i - N : i])
+            pred = model.predict(X.iloc[i : i + 1])
             preds.append(pred[0])
         preds = pd.Series(preds, index=y_test.index)
         return preds
-    
+
     plot(linear_model_N(1), y_test)
     evaluate(linear_model_N(1), y_test, verbose=True)
 
@@ -41,16 +42,16 @@ def train():
         RMSEs.append(rmse)
 
     # Plot
-    plt.plot(RMSEs, 'x-')
+    plt.plot(RMSEs, "x-")
     plt.grid()
-    plt.xlabel('N')
-    plt.ylabel('RMSE')
+    plt.xlabel("N")
+    plt.ylabel("RMSE")
     # plt.xlim([0, 10])
     # plt.ylim([0, 50])
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="Train LSTM model")
     # parser.add_argument("--config-file", "-c", type=str, default='configs/lstm.yaml')
     # args = parser.parse_args()

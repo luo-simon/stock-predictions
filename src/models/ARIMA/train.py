@@ -3,10 +3,11 @@ from src.misc import split_data, evaluate, plot
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
 
-# TODO: 
+# TODO:
 # - fix up training loop (use X_train appropriately)
 # - create config, and put in model params (p,d,q)
 # - separate out train and eval
+
 
 def train():
     X, y = load_data()
@@ -15,13 +16,12 @@ def train():
     X_train, X_val, X_test = split_data(X, verbose=False)
     y_train, y_val, y_test = split_data(y, verbose=False)
 
-    
     # Train
     history = [y for y in y_train]
     preds = []
 
     for t in range(len(y_test)):
-        model = ARIMA(history, order=(1,1,0))
+        model = ARIMA(history, order=(1, 1, 0))
         model_fit = model.fit()
         output = model_fit.forecast()
         preds.append(output[0])
@@ -38,7 +38,7 @@ def train():
     return preds, y_test
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="Train LSTM model")
     # parser.add_argument("--config-file", "-c", type=str, default='configs/lstm.yaml')
     # args = parser.parse_args()
