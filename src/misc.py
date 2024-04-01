@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import mlflow
 
 def load_csv_to_df(path):
     """Load a stock historical price csv to a DataFrame with appropriate date index"""
@@ -97,4 +98,21 @@ def create_sequences(Xs, ys, sequence_length):
         X.append(Xs[i-sequence_length:i])
         y.append(ys[i-1])
     return np.array(X), np.array(y)
+
+def load_pytorch_model_from_latest_run(experiment_name):
+    mlflow.set_tracking_uri('http://127.0.0.1:5000')
+    runs = mlflow.search_runs(experiment_ids=[mlflow.get_experiment_by_name(experiment_name).experiment_id], order_by=["start_time desc"])
+    assert not runs.empty, "No runs found in specified experiment."
+    latest_run_id = runs.iloc[0]["run_id"]
+    model = mlflow.pytorch.load_model(f"runs:/{latest_run_id}/models")
+    return model
+
+def load_sklearn_model_from_latest_run(experiment_name):
+    mlflow.set_tracking_uri('http://127.0.0.1:5000')
+    runs = mlflow.search_runs(experiment_ids=[mlflow.get_experiment_by_name(experiment_name).experiment_id], order_by=["start_time desc"])
+    assert not runs.empty, "No runs found in specified experiment."
+    latest_run_id = runs.iloc[0]["run_id"]
+    model = mlflow.sklearn.load_model(f"runs:/{latest_run_id}/models")
+    return model
+    
 

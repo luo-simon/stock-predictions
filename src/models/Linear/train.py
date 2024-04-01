@@ -11,6 +11,10 @@ import mlflow
 # - separate out train and eval files
 
 def train():
+    # # Enable MLflow autologging
+    # mlflow.sklearn.autolog()
+
+    # Load dataset
     X, y = load_data()
 
     # Split
