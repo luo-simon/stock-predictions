@@ -7,13 +7,20 @@ model:
    num_layers: 2
 
 data:
-  features: ["Open", "High", "Low", "Close", "Volume"]
-  sequence_len: 60
+  features: ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits',
+      'Close_T-1', 'Close_T-2', 'Close_T-3', 'Close_T-4',
+       'Close_T-5', 'pct_change', 'log_return', 'dayofweek', 'quarter',
+       'month', 'year', 'dayofyear', 'dayofmonth', 'weekofyear', '^IXIC',
+       '^SPX', 'upper_band', 'middle_band', 'lower_band', 'SMA_10', 'SMA_20',
+       'SMA_50', 'EMA_10', 'EMA_20', 'EMA_50', 'ADX', 'Aroon_down', 'Aroon_up',
+       'macd', 'macdsignal', 'macdhist', 'RSI_14', 'SlowK', 'SlowD',
+       'Williams %R', 'AD', 'OBV', 'NATR', 'TRANGE']
+  sequence_len: 10
 
 # Training parameters
 training:
   batch_size: 128
-  num_epochs: 10
+  num_epochs: 50
   lr: 0.001
   output_path  : 'models'
 
@@ -29,4 +36,8 @@ mlflow:
 hyperparameter_tuning:
   batch_size: [64, 128, 256]
   num_epochs: [10, 20, 50]
-  lr: [0.001, 0.01, 0.1]
+  lr: [0.1, 0.01, 0.001]
+  sequence_len: [5, 10, 20, 50]
+  optimizer: ["Adam"]
+  hidden_dim: [32, 64, 124, 256]
+  num_layers: [2, 4, 8]

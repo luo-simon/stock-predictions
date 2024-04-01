@@ -21,9 +21,9 @@ if __name__ == "__main__":
     for run in runs:
         train(
             config["data"]["features"],
-            config["data"]["sequence_len"],
-            config["model"]["hidden_dim"],
-            config["model"]["num_layers"],
+            run["sequence_len"],
+            run["model"]["hidden_dim"],
+            run["model"]["num_layers"],
             run["num_epochs"],
             run["batch_size"],
             run["lr"],

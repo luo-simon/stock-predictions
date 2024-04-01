@@ -31,7 +31,7 @@ def train(
     tags,
 ):
     # Load data
-    X, y = load_data(features=features, sequence_len=sequence_len)
+    X, y = load_data(features=features)
 
     # Split
     X_train, X_val, X_test = split_data(X, verbose=False)
@@ -75,7 +75,7 @@ def train(
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # Create model:
-    input_dim = 5  # Number of features
+    input_dim = len(features)
     output_dim = 1  # Number of output classes (predicting 'Close Forecast')
     model = StockPriceLSTM(input_dim, hidden_dim, num_layers, output_dim)
 
@@ -85,14 +85,15 @@ def train(
 
     # Log parameters:
     params = {
+        "features": features,
+        "sequence_len": sequence_len,
         "hidden_dim": hidden_dim,
         "num_layers": num_layers,
         "lr": lr,
-        "optimizer": "Adam",
+        "optimizer": optimizer.__class__.__name__,
         "loss": criterion.__class__.__name__,
         "epochs": num_epochs,
         "batch size": batch_size,
-        "sequence length": sequence_len,
     }
 
     # Set tracking server uri for logging
