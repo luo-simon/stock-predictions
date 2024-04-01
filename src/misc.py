@@ -6,6 +6,7 @@ import mlflow
 
 def load_csv_to_df(path):
     """Load a stock historical price csv to a DataFrame with appropriate date index"""
+    
     df = pd.read_csv(path, index_col=0)
     df.index = pd.to_datetime(df.index, utc=True)
     df.index = df.index.tz_localize(None)
