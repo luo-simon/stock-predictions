@@ -6,9 +6,9 @@ i.e. correct shape, datatype and normalised/scaled as appropriate
 import numpy as np
 from src.misc import load_processed_dataset
 import torch
+import pandas as pd
 
-
-def load_data(features, sequence_len):
+def load_data(features):
     """
     Returns X and y
     """
@@ -17,18 +17,6 @@ def load_data(features, sequence_len):
     
     
     X = df[features]
-    y = df["Close Forecast"]
+    y = pd.DataFrame(df["Close Forecast"])
     
     return X, y
-
-def create_sequences(Xs, ys, sequence_length):
-    """
-    Given a numpy array, create sequences of a fixed length, where
-    each sequence will be used to predict the closing price of the next day.
-    """
-    X = []
-    y = []
-    for i in range(sequence_length, len(Xs)+1):
-        X.append(Xs[i-sequence_length:i])
-        y.append(ys[i-1])
-    return np.array(X), np.array(y)

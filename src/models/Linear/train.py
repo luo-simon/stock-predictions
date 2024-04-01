@@ -3,7 +3,7 @@ from src.misc import split_data, evaluate, plot
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
-
+import mlflow
 
 # TODO: 
 # - fix up training loop (use X_train appropriately)

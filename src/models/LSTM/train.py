@@ -6,9 +6,9 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 import mlflow
 from mlflow.models.signature import infer_signature
-from src.models.LSTM.data import load_data, create_sequences
+from src.models.LSTM.data import load_data
 from src.models.LSTM.model import StockPriceLSTM
-from src.misc import split_data, evaluate
+from src.misc import split_data, evaluate, create_sequences
 from sklearn.preprocessing import StandardScaler
 
 # torch.backends.cudnn.benchmark = True

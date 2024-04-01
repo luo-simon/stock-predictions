@@ -4,9 +4,10 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 import mlflow
-from src.models.LSTM.data import load_data, create_sequences
-from src.misc import split_data, evaluate
+from src.models.LSTM.data import load_data
+from src.misc import split_data, evaluate, plot, create_sequences
 from sklearn.preprocessing import StandardScaler
+import pandas as pd
 
 
 def eval(features, sequence_len, experiment_name):
@@ -62,13 +63,21 @@ def eval(features, sequence_len, experiment_name):
         predictions = np.array(predictions)
         actuals = np.array(actuals)
 
-        predictions_rescaled = out_scaler.inverse_transform(predictions.reshape(-1,1))
-        actuals_rescaled = out_scaler.inverse_transform(actuals.reshape(-1,1))
-        r2, mse, rmse, mae, mape = evaluate(predictions_rescaled, actuals_rescaled, verbose=True)
+        predictions_rescaled = out_scaler.inverse_transform(predictions.reshape(-1,1)).flatten()
+        actuals_rescaled = out_scaler.inverse_transform(actuals.reshape(-1,1)).flatten()
+
+        preds = pd.Series(predictions_rescaled, index=y_test[sequence_len-1:].index)
+        obs = pd.Series(actuals_rescaled, index=y_test[sequence_len-1:].index)
+
+        r2, mse, rmse, mae, mape = evaluate(preds, obs, verbose=True)
         
         # Plot
+        plot(preds, obs)
+
+        return preds, obs
     else:
         print("No runs found in the specified experiment.")
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Evaluate LSTM model")

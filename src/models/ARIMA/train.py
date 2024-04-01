@@ -35,6 +35,8 @@ def train():
     # Plot
     plot(preds, y_test)
 
+    return preds, y_test
+
 
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser(description="Train LSTM model")

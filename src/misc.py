@@ -86,3 +86,15 @@ def evaluate(predicted, observed, verbose=False):
 
     return r2, mse, rmse, mae, mape
 
+def create_sequences(Xs, ys, sequence_length):
+    """
+    Given a numpy array, create sequences of a fixed length, where
+    each sequence will be used to predict the closing price of the next day.
+    """
+    X = []
+    y = []
+    for i in range(sequence_length, len(Xs)+1):
+        X.append(Xs[i-sequence_length:i])
+        y.append(ys[i-1])
+    return np.array(X), np.array(y)
+

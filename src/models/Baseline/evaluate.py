@@ -23,5 +23,7 @@ def eval():
     # Plot
     plot(preds, y_test)
 
+    return preds, y_test
+
 if __name__ == '__main__':
     eval()
