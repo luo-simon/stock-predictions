@@ -1,8 +1,6 @@
 import argparse
 import os
-import pandas as pd
 import talib
-from datetime import datetime, timedelta
 from src.misc import load_csv_to_df
 import numpy as np
 

@@ -1,7 +1,6 @@
 from src.models.XGBoost.data import load_data
 from src.misc import split_data, evaluate, plot
 import pandas as pd
-from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 import xgboost as xgb
 

@@ -1,9 +1,6 @@
 import argparse
 import itertools
-
-import mlflow
 import yaml
-
 from src.models.LSTM.train import train
 
 if __name__ == "__main__":

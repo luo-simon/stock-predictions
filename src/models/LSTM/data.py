@@ -3,9 +3,7 @@ Preprocess data to produce suitable inputs to model
 i.e. correct shape, datatype and normalised/scaled as appropriate
 """
 
-import numpy as np
 from src.misc import load_processed_dataset
-import torch
 import pandas as pd
 
 

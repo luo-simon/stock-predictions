@@ -13,47 +13,29 @@ import pandas as pd
 def eval(features, sequence_len, experiment_name):
     # Load test data
     # Load data
-    X, y = load_data(features=features, sequence_len=sequence_len)
+    X, y = load_data(features=features)
 
     # Split
-    X_train, X_val, X_test = split_data(X, verbose=False)
-    y_train, y_val, y_test = split_data(y, verbose=False)
+    X_train, _, X_test = split_data(X, verbose=False)
+    y_train, _, y_test = split_data(y, verbose=False)
 
     # Normalisation
     in_scaler = StandardScaler()
     out_scaler = StandardScaler()
-    X_train_norm = in_scaler.fit_transform(X_train.values)
-    X_val_norm = in_scaler.transform(X_val.values)
+    _ = in_scaler.fit_transform(X_train.values)
     X_test_norm = in_scaler.transform(X_test.values)
-    y_train_norm = out_scaler.fit_transform(y_train.values.reshape(-1, 1))
-    y_val_norm = out_scaler.transform(y_val.values.reshape(-1, 1))
+    _ = out_scaler.fit_transform(y_train.values.reshape(-1, 1))
     y_test_norm = out_scaler.transform(y_test.values.reshape(-1, 1))
 
     # Sequencing
-    X_train_seq, y_train_seq = create_sequences(
-        X_train_norm, y_train_norm, sequence_len
-    )
-    X_val_seq, y_val_seq = create_sequences(X_val_norm, y_val_norm, sequence_len)
     X_test_seq, y_test_seq = create_sequences(X_test_norm, y_test_norm, sequence_len)
 
     # TensorDatasets and DataLoaders
-    train_dataset = TensorDataset(
-        torch.tensor(X_train_seq.astype(np.float32)),
-        torch.tensor(y_train_seq.astype(np.float32)),
-    )
-    val_dataset = TensorDataset(
-        torch.tensor(X_val_seq.astype(np.float32)),
-        torch.tensor(y_val_seq.astype(np.float32)),
-    )
     test_dataset = TensorDataset(
         torch.tensor(X_test_seq.astype(np.float32)),
         torch.tensor(y_test_seq.astype(np.float32)),
     )
 
-    train_loader = DataLoader(
-        train_dataset, batch_size=64, shuffle=True
-    )  # Shuffle or no shuffle?
-    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
     # Load model:

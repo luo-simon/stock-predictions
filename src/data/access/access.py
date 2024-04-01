@@ -3,7 +3,6 @@
 import argparse
 import os.path
 import yfinance as yf
-from datetime import datetime
 
 
 def download_raw_data(ticker, path):

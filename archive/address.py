@@ -85,11 +85,11 @@ def model_1_1(df, N, split=0.8, verbose=True):
     """
     Given a dataframe, get prediction at each timestep
     Inputs
-        df         : dataframe with the values you want to predict
-        N          : use previous N values to do prediction
-        offset     : for df we only do predictions for df[offset:]
+        df        :  dataframe with the values you want to predict
+        N         :  use previous N values to do prediction
+        offset    :  for df we only do predictions for df[offset:]
     Outputs
-        pred_list  : the predictions for target_col
+        pred_list :  the predictions for target_col
     """
     X_train, X_test, Y_train, Y_test = create_train_test_set(df, split, verbose=False)
     train_split = int(len(df) * split)
@@ -259,7 +259,7 @@ def model_4(df, split=0.8):
         booster="gbtree",
         n_estimators=1000,
         early_stopping_rounds=50,
-        objective="reg:linear",
+        objective="reg: linear",
         max_depth=3,
         learning_rate=0.01,
     )
@@ -309,7 +309,7 @@ def trade(df, preds, verbose=True):
 
         if verbose:
             print(
-                f"{today.name.strftime('%Y-%m-%d'):10s}: {action:4s} @ {today['Open']:8.2f} | Close @ {today['Close']:8.2f} | Day P/L {daily_pnl:8.2f} | Cum. P/L: {pnl:8.2f}"
+                f"{today.name.strftime('%Y-%m-%d'): 10s}:  {action: 4s} @ {today['Open']: 8.2f} | Close @ {today['Close']: 8.2f} | Day P/L {daily_pnl: 8.2f} | Cum. P/L:  {pnl: 8.2f}"
             )
 
     return pnl
@@ -321,9 +321,9 @@ def trade_buy_hold(data, split=0.8):
     buy = df.iloc[0]["Open"]
     sell = df.iloc[-1]["Close"]
     pnl = sell - buy
-    print(f"{df.index[0].strftime('%Y-%m-%d'):10s}: Buy @ {buy:8.2f}")
-    print(f"{df.index[-1].strftime('%Y-%m-%d'):10s}: Sell @ {sell:8.2f}")
-    print(f"PNL: {pnl}")
+    print(f"{df.index[0].strftime('%Y-%m-%d'): 10s}:  Buy @ {buy: 8.2f}")
+    print(f"{df.index[-1].strftime('%Y-%m-%d'): 10s}:  Sell @ {sell: 8.2f}")
+    print(f"PNL:  {pnl}")
     return pnl
 
 
@@ -333,7 +333,7 @@ def trade_sell_hold(data, split=0.8):
     sell = df.iloc[0]["Open"]
     buy = df.iloc[-1]["Close"]
     pnl = sell - buy
-    print(f"{df.index[0].strftime('%Y-%m-%d'):10s}: Buy @ {buy:8.2f}")
-    print(f"{df.index[-1].strftime('%Y-%m-%d'):10s}: Sell @ {sell:8.2f}")
-    print(f"PNL: {pnl}")
+    print(f"{df.index[0].strftime('%Y-%m-%d'): 10s}:  Buy @ {buy: 8.2f}")
+    print(f"{df.index[-1].strftime('%Y-%m-%d'): 10s}:  Sell @ {sell: 8.2f}")
+    print(f"PNL:  {pnl}")
     return pnl
