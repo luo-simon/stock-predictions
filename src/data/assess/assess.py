@@ -80,17 +80,12 @@ def generate_features(df):
     df['dayofmonth'] = df.index.day
     df['weekofyear'] = df.index.isocalendar().week
 
-    # Index-prices
+    # Index-price 
     sp_close = load_csv_to_df("/Users/simon/Documents/II/Dissertation/data/external/^SPX.csv")["Close"]
     df["S&P Close"] = sp_close
 
-    
 
     return df
-
-def view(data):
-    """Provide a view of the data that allows the user to verify some aspect of its quality."""
-    raise NotImplementedError
 
 
 if __name__ == '__main__':

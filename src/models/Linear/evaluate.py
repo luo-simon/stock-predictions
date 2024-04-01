@@ -1,27 +1,29 @@
-from src.models.Baseline.model import model
-from src.models.Baseline.data import load_data
-from src.misc import split_data, evaluate, plot
-
+from src.models.Linear.data import load_data
+from src.misc import split_data, evaluate, plot, load_sklearn_model_from_latest_run
+import pandas as pd
 
 def eval():
-    # Load test data
+    # Load dataset
     X, y = load_data()
-    
+
     # Split
-    _, _, X_test = split_data(X, verbose=False)
-    _, _, y_test = split_data(y, verbose=False)
+    X_train, X_val, X_test = split_data(X, verbose=False)
+    y_train, y_val, y_test = split_data(y, verbose=False)
     
     # Load model
-    loaded_model = model
+    model = load_sklearn_model_from_latest_run("linear")
     
     # Predict
-    preds = loaded_model(X_test) 
-
+    preds = pd.Series(model.predict(X_test), index=y_test.index)
+    
     # Evaluate
-    evaluate(preds, y_test, verbose=True)
+    r2, mse, rmse, mae, mape = evaluate(preds, y_test, verbose=True)
     
     # Plot
     plot(preds, y_test)
+
+    return r2, mse, rmse, mae, mape
+
 
 if __name__ == '__main__':
     eval()

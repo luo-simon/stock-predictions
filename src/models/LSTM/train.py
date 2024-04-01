@@ -131,7 +131,7 @@ def train(features, sequence_len, hidden_dim, num_layers, num_epochs, batch_size
             "rmse": rmse,
             "mae": mae,
             "mape": mape
-        })
+        }) # type: ignore
 
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tags(tags)

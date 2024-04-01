@@ -1,62 +1,56 @@
 from src.models.Linear.data import load_data
+from src.models.Linear.evaluate import eval
 from src.misc import split_data, evaluate, plot
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 import mlflow
+from mlflow.models.signature import infer_signature
 
-# TODO: 
-# - fix up training loop (use X_train appropriately)
-# - create config, and put in model params
-# - separate out train and eval files
+
+def fetch_logged_data(run_id):
+    client = MlflowClient()
+    data = client.get_run(run_id).data
+    tags = {k: v for k, v in data.tags.items() if not k.startswith("mlflow.")}
+    artifacts = [f.path for f in client.list_artifacts(run_id, "model")]
+    return data.params, data.metrics, tags, artifacts
 
 def train():
-    # # Enable MLflow autologging
-    # mlflow.sklearn.autolog()
+    # Enable MLflow autologging
+    mlflow.set_tracking_uri("http://127.0.0.1:5000/")
+    mlflow.set_experiment("linear")
+    mlflow.sklearn.autolog()
 
     # Load dataset
     X, y = load_data()
 
     # Split
-    _, _, y_test = split_data(y, verbose=False)
+    X_train, X_val, X_test = split_data(X, verbose=True)
+    y_train, y_val, y_test = split_data(y, verbose=False)
 
     # Train
-    def linear_model_N(N):
-        preds = []
-        model = LinearRegression(fit_intercept=True)
-        for i in range(int(len(X) * 0.9), len(X)):
-            model.fit(X.iloc[i-N:i], y.iloc[i-N:i])
-            pred = model.predict(X.iloc[i:i+1])
-            preds.append(pred[0])
-        preds = pd.Series(preds, index=y_test.index)
-        return preds
-    
-    plot(linear_model_N(1), y_test)
-    evaluate(linear_model_N(1), y_test, verbose=True)
+    model = LinearRegression(fit_intercept=True)
+
+    with mlflow.start_run() as run:
+        model.fit(pd.concat([X_train, X_val]), pd.concat([y_train, y_val]))
 
     # Evaluate
-    RMSEs = [0]
-    for n in range(1, 80):
-        r2, mse, rmse, mae, mape = evaluate(linear_model_N(n), y_test)
-        RMSEs.append(rmse)
+    preds = model.predict(X_test)
+    r2, mse, rmse, mae, mape = evaluate(preds, y_test)
 
-    # Plot
-    plt.plot(RMSEs, 'x-')
-    plt.grid()
-    plt.xlabel('N')
-    plt.ylabel('RMSE')
-    # plt.xlim([0, 10])
-    # plt.ylim([0, 50])
-    plt.show()
+    # Log the metrics
+    mlflow.log_metrics({
+        "r2": r2,
+        "mse": mse,
+        "rmse": rmse,
+        "mae": mae,
+        "mape": mape
+    }) # type: ignore
+
+    # Save model:
+    signature = infer_signature(X_test, preds)
+    mlflow.sklearn.log_model(model, "models", signature=signature)
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(description="Train LSTM model")
-    # parser.add_argument("--config-file", "-c", type=str, default='configs/lstm.yaml')
-    # args = parser.parse_args()
-
-    # # Load the configuration file:
-    # with open(args.config_file, 'r') as file:
-    #     config = yaml.safe_load(file)
-
     train()
