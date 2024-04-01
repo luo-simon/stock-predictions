@@ -137,7 +137,10 @@ def train(features, sequence_len, hidden_dim, num_layers, num_epochs, batch_size
         mlflow.set_tags(tags)
 
         # Save model:
-        signature = infer_signature(X_train, y_train)
+        inputs, _ = next(iter(train_loader))
+        with torch.no_grad():
+            outputs = model(inputs)
+        signature = infer_signature(inputs.detach().cpu().numpy(), outputs.detach().cpu().numpy())
         mlflow.pytorch.log_model(model, output_path, signature=signature)
 
 

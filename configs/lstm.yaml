@@ -12,8 +12,8 @@ data:
 
 # Training parameters
 training:
-  batch_size: 64
-  num_epochs: 20
+  batch_size: 128
+  num_epochs: 10
   lr: 0.001
   output_path  : 'models'
 
