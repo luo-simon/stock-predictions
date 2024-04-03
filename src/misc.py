@@ -123,7 +123,6 @@ def load_pytorch_model_from_latest_run(experiment_name):
     return model
 
 
-
 def load_sklearn_model_from_latest_run(experiment_name):
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
     runs = mlflow.search_runs(
@@ -140,11 +139,8 @@ def load_model_from_experiment(experiment_name, select_by="rmse"):
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
     experiment_id = mlflow.get_experiment_by_name(experiment_name).experiment_id
 
-    order_by_mapping = {
-        "recent": "start_time desc",
-        "rmse": "metrics.rmse asc"
-    }
-    
+    order_by_mapping = {"recent": "start_time desc", "rmse": "metrics.rmse asc"}
+
     runs = mlflow.search_runs(
         experiment_ids=[experiment_id],
         order_by=[order_by_mapping[select_by]],
@@ -154,6 +150,7 @@ def load_model_from_experiment(experiment_name, select_by="rmse"):
     run_id = runs.iloc[0]["run_id"]
     model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
     return model
+
 
 def load_model_from_run_id(run_id):
     mlflow.set_tracking_uri("http://127.0.0.1:5000")

@@ -4,6 +4,7 @@ from src.misc import split_data, evaluate, plot, load_model_from_run_id
 import mlflow
 from statsmodels.tsa.arima.model import ARIMA
 
+
 def eval(p, d, q, run_id):
     # Load test data
     X, y = load_data()
@@ -17,12 +18,12 @@ def eval(p, d, q, run_id):
     fit_res = mlflow.statsmodels.load_model(f"runs:/{run_id}/model")
 
     # Evaluate
-    model = ARIMA(y, order=(p,d,q))
+    model = ARIMA(y, order=(p, d, q))
     res = model.filter(fit_res.params)
     predict = res.get_prediction()
     # predict_ci = predict.conf_int() # todo: conf. intervals
     preds = predict.predicted_mean.loc[y_test.index]
-   
+
     r2, mse, rmse, mae, mape = evaluate(preds, y_test, verbose=True)
 
     # Plot

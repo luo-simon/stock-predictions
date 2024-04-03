@@ -18,7 +18,7 @@ def train(features=[]):
     y_train, y_val, y_test = split_data(y, verbose=False)
     X_train = pd.concat([X_train, X_val])
     y_train = pd.concat([y_train, y_val])
-    
+
     if len(features) > 0:
         X_train = X_train[features]
         X_test = X_test[features]
@@ -66,5 +66,15 @@ def train(features=[]):
 
 
 if __name__ == "__main__":
-    features = ['Close', 'SMA_5', 'williams_r', 'TRANGE', 'AD', 'EMA_50', 'log_^FTSE', 'log_low', 'upper_band']
+    features = [
+        "Close",
+        "SMA_5",
+        "williams_r",
+        "TRANGE",
+        "AD",
+        "EMA_50",
+        "log_^FTSE",
+        "log_low",
+        "upper_band",
+    ]
     train(features=features)

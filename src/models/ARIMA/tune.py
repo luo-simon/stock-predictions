@@ -21,11 +21,13 @@ if __name__ == "__main__":
         existing_runs = pd.DataFrame()
         if experiment:
             # Search for runs with the same parameters in this experiment
-            query =" and ".join([f"params.{param}='{value}'" for param, value in run.items()])
+            query = " and ".join(
+                [f"params.{param}='{value}'" for param, value in run.items()]
+            )
             existing_runs = mlflow.search_runs(
                 experiment_ids=[experiment.experiment_id], filter_string=query
             )
-            
+
         if not existing_runs.empty:
             print(f"{run} has already been run.")
             continue
