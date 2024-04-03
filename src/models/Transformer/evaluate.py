@@ -19,7 +19,6 @@ import pandas as pd
 from src.models.Transformer.data import load_data
 
 
-
 def eval(features, sequence_len, run_id):
     # Load data
     X, y = load_data(features=features, sequence_len=sequence_len)
@@ -27,7 +26,6 @@ def eval(features, sequence_len, run_id):
     # Split
     X_train, X_val, X_test = split_data(X, verbose=False)
     y_train, y_val, y_test = split_data(y, verbose=False)
-
 
     # Normalise
 
@@ -70,15 +68,15 @@ def eval(features, sequence_len, run_id):
     # Evaluate
     actuals, predictions = [], []
     model.eval()
-    with torch.no_grad(): 
+    with torch.no_grad():
         for X, y in test_loader:
-                    preds = model(X)
-                    preds = preds[:, -1:, :].squeeze()
-                    y = y[:, -1:, :].squeeze()
-                    actuals.extend(y)
-                    predictions.extend(preds)
-    actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1,1))
-    predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1,1))
+            preds = model(X)
+            preds = preds[:, -1:, :].squeeze()
+            y = y[:, -1:, :].squeeze()
+            actuals.extend(y)
+            predictions.extend(preds)
+    actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1, 1))
+    predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
     r2, mse, rmse, mae, mape = evaluate(predictions, actuals, verbose=True)
 

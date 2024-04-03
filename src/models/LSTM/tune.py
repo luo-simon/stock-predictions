@@ -10,7 +10,7 @@ from src.models.LSTM.train import train
 if __name__ == "__main__":
     with open("configs/lstm.yaml", "r") as file:
         config = yaml.safe_load(file)
-        
+
     params = config["hyperparameter_tuning"]
     experiment = mlflow.get_experiment_by_name(config["mlflow"]["experiment_name"])
     keys, values = zip(*params.items())

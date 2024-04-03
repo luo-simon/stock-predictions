@@ -3,7 +3,8 @@ from src.misc import (
     split_data,
     evaluate,
     plot,
-    load_model_from_experiment, load_model_from_run_id
+    load_model_from_experiment,
+    load_model_from_run_id,
 )
 import pandas as pd
 
@@ -12,7 +13,7 @@ def eval(run_id, features):
     # Load dataset
     X, y = load_data()
     X = X[features]
-    
+
     # Split
     X_train, X_val, X_test = split_data(X, verbose=False)
     y_train, y_val, y_test = split_data(y, verbose=False)

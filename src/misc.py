@@ -110,6 +110,7 @@ def create_sequences(Xs, ys, sequence_length):
         y.append(ys[i - 1])
     return np.array(X), np.array(y)
 
+
 def create_sequence(X, sequence_length):
     """
     Given a numpy array, create sequences of a fixed length, where

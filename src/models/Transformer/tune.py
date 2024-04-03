@@ -30,7 +30,7 @@ if __name__ == "__main__":
         if not existing_runs.empty:
             print(f"{run} has already been run.")
             continue
-        
+
         print(f"Running with {run}.")
         train(
             config["data"]["features"],

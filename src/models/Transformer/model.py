@@ -3,14 +3,19 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
+
 class TimeSeriesTransformer(nn.Module):
     def __init__(self, feature_size, num_layers, dropout):
         super(TimeSeriesTransformer, self).__init__()
-        self.model_type = 'Transformer'
+        self.model_type = "Transformer"
         self.src_mask = None
         self.pos_encoder = PositionalEncoding(feature_size, dropout)
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=feature_size, nhead=8, dropout=dropout)
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            d_model=feature_size, nhead=8, dropout=dropout
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            self.encoder_layer, num_layers=num_layers
+        )
         self.decoder = nn.Linear(feature_size, 1)
         self.init_weights()
 
@@ -31,8 +36,13 @@ class TimeSeriesTransformer(nn.Module):
 
     def _generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        mask = (
+            mask.float()
+            .masked_fill(mask == 0, float("-inf"))
+            .masked_fill(mask == 1, float(0.0))
+        )
         return mask
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
@@ -44,8 +54,8 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(max_len, 1, d_model)
         pe[:, 0, 0::2] = torch.sin(position * div_term)
         pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x):
-        x = x + self.pe[:x.size(0)]
+        x = x + self.pe[: x.size(0)]
         return self.dropout(x)

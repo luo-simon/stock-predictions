@@ -16,6 +16,7 @@ from src.models.Transformer.model import TimeSeriesTransformer
 np.random.seed(1)
 torch.manual_seed(1)
 
+
 def train(
     features,
     sequence_len,
@@ -31,7 +32,6 @@ def train(
     # Split
     X_train, X_val, X_test = split_data(X, verbose=False)
     y_train, y_val, y_test = split_data(y, verbose=False)
-
 
     # Normalise
 
@@ -70,7 +70,9 @@ def train(
     test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
     # Instantiate the model
-    model = TimeSeriesTransformer(feature_size=len(features), num_layers=num_layers, dropout=dropout)
+    model = TimeSeriesTransformer(
+        feature_size=len(features), num_layers=num_layers, dropout=dropout
+    )
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -125,15 +127,15 @@ def train(
         # Evaluate
         actuals, predictions = [], []
         model.eval()
-        with torch.no_grad(): 
+        with torch.no_grad():
             for X, y in test_loader:
-                        preds = model(X)
-                        preds = preds[:, -1:, :].squeeze()
-                        y = y[:, -1:, :].squeeze()
-                        actuals.extend(y)
-                        predictions.extend(preds)
-        actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1,1))
-        predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1,1))
+                preds = model(X)
+                preds = preds[:, -1:, :].squeeze()
+                y = y[:, -1:, :].squeeze()
+                actuals.extend(y)
+                predictions.extend(preds)
+        actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1, 1))
+        predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
         r2, mse, rmse, mae, mape = evaluate(predictions, actuals)
 
         # Log the metrics
