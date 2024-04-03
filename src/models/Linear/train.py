@@ -48,14 +48,16 @@ def train(features=[]):
 
         # Plot
         features_coeffs = np.vstack((X_train.columns, model.coef_)).T
-        features_coeffs = sorted(features_coeffs, key=lambda x: abs(float(x[1])), reverse=False)
+        features_coeffs = sorted(
+            features_coeffs, key=lambda x: abs(float(x[1])), reverse=False
+        )
         features, coeffs = zip(*features_coeffs)
 
         plt.figure(figsize=(12, 10))
         plt.barh(features, coeffs)
-        plt.ylabel('Features')
-        plt.xlabel('Coefficient Value')
-        plt.title('Feature Coefficients from Linear Regression')
+        plt.ylabel("Features")
+        plt.xlabel("Coefficient Value")
+        plt.title("Feature Coefficients from Linear Regression")
         plot_path = "/Users/simon/Documents/II/Dissertation/figures/linear.png"
         plt.savefig(plot_path)
         mlflow.log_artifact(plot_path)

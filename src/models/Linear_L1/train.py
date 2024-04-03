@@ -25,7 +25,7 @@ def train(alpha=0.1):
 
     # Model
     model = Lasso(alpha=alpha, random_state=42)
-    
+
     with mlflow.start_run() as _:
         # Log params
         mlflow.log_params({"alpha": alpha})
@@ -44,14 +44,16 @@ def train(alpha=0.1):
 
         # Plot
         features_coeffs = np.vstack((X_train.columns, model.coef_)).T
-        features_coeffs = sorted(features_coeffs, key=lambda x: abs(float(x[1])), reverse=False)
+        features_coeffs = sorted(
+            features_coeffs, key=lambda x: abs(float(x[1])), reverse=False
+        )
         features, coeffs = zip(*features_coeffs)
 
         plt.figure(figsize=(12, 10))
         plt.barh(features, coeffs)
-        plt.ylabel('Features')
-        plt.xlabel('Coefficient Value')
-        plt.title('Feature Coefficients from Lasso Regression')
+        plt.ylabel("Features")
+        plt.xlabel("Coefficient Value")
+        plt.title("Feature Coefficients from Lasso Regression")
         plot_path = "/Users/simon/Documents/II/Dissertation/figures/linear_l1.png"
         plt.savefig(plot_path)
         mlflow.log_artifact(plot_path)

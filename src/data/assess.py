@@ -131,7 +131,7 @@ def generate_features(df):
     )
     fed_funds = fed_funds.reindex(df.index, method="ffill")
     df = df.join(fed_funds, how="left")
-    df[f"log_fed_funds_rate"] = np.log(df["fed_funds_rate"])
+    df["log_fed_funds_rate"] = np.log(df["fed_funds_rate"])
 
     # Market Indices # Todo: Data Leakage
     external_path = "data/external"

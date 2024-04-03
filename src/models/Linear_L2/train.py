@@ -44,17 +44,20 @@ def train(alpha=1.0):
 
         # Plot
         features_coeffs = np.vstack((X_train.columns, model.coef_)).T
-        features_coeffs = sorted(features_coeffs, key=lambda x: abs(float(x[1])), reverse=False)
+        features_coeffs = sorted(
+            features_coeffs, key=lambda x: abs(float(x[1])), reverse=False
+        )
         features, coeffs = zip(*features_coeffs)
 
         plt.figure(figsize=(12, 10))
         plt.barh(features, coeffs)
-        plt.ylabel('Features')
-        plt.xlabel('Coefficient Value')
-        plt.title('Feature Coefficients from Ridge Regression')
+        plt.ylabel("Features")
+        plt.xlabel("Coefficient Value")
+        plt.title("Feature Coefficients from Ridge Regression")
         plot_path = "/Users/simon/Documents/II/Dissertation/figures/linear_l2.png"
         plt.savefig(plot_path)
         mlflow.log_artifact(plot_path)
+
 
 if __name__ == "__main__":
     train(alpha=0.1)
