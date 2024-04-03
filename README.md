@@ -57,7 +57,7 @@
 ### Feature Importance // Model Interpretability
 ### Final Models
 
-## Evaluation outlint
+## Evaluation outline
 Todo
 
 
@@ -72,8 +72,9 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
 │   ├── processed      <- The final, canonical data sets for modeling.
 │   └── raw            <- The original, immutable data dump.
 ├── configs            <- Model configuration files
-├── notebooks          <- Jupyter notebooks 
 ├── figures            <- Generated graphics and figures to be used in reporting
+├── notebooks          <- Jupyter notebooks 
+├── requirements.txt   <- The requirements file for reproducing the analysis environment
 ├── src                <- Source code for use in this project.
 │   ├── data           
 │   │   ├── access.py  <- Get data 
@@ -90,3 +91,15 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
 │   ├── trading        <- Simulating trading strategies based on model predictions
 │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
 ```
+
+## Libraries
+- Data
+    - `yfinance` to interface with Yahoo Finance datasets
+    - `ta-lib` to generate technical indicators
+- Machine-Learning
+    - `sklearn`, `pytorch`
+    - `mlflow` for logging model experiments
+- Misc
+    - `numpy`, `pandas`, `matplotlib`, `seaborn`, `yaml`
+- Formatting/Linting
+    - `black`, `flake8`
