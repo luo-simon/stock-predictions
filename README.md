@@ -1,27 +1,61 @@
-# Part II Project
+# Comparative Analysis of Machine-Learning Methods to Predict Stock Price
+
+## Implementation Outline
+
+Data Access
+- Decide on range, split, stock
+Feature Engineering
+- Technical indicators
+- Market Indices (major 5)
+- Macroeconomic data (FFR)
+- Fundamental Analysis Data 
+- Sentiment Analysis (Difficult to do, no historical source)
+Data preprocessing (+Exploratory Data Analysis)
+- Imputation
+- Outliers
+- Transformation (log: skewed->normal)
+- Scaling (non-target variables, careful no data leakage)
+Feature selection
+- Filter
+    - Correlation coefficient
+    - Mutual information
+    - Fisher’s Score
+    - Variance Threshold
+    - F test
+- Wrapper
+    - Recursive feature elimination
+    - Sequential feature selection (forward/backward)
+- Embedded
+    - Lasso Linear Regression
+    - Random Forest Impurity
+Dimensionality reduction
+- PCA
+Model selection 
+- Baseline
+- ARIMA
+- Linear
+    - Lasso (with regularisation)
+- Logistic
+- LSTM
+    - Bidirectional LSTM (BiLSTM)
+    - CNN-BiLSTM
+    - TCN-BiLSTM
+    - MDN-BiLSTM
+    - Attention-BiLSTM
+- Seq2Seq
+    - Seq2Seq with Attention
+    - MultiHeadAttention-BiLSTM
+- Time2Vec-BiLSTM
+- Time2Vec with Transformer
+- Average Ensemble Model
+- XGB
+Model training 
+Hyperparameter tuning
+Feature Importance // Model Interpretability
+Final models
 
 
-## Components
 
-### Data Pipeline
-Collect data (access)
-Preprocessing (assess)
-- Filling missing values
-- Validation
-- Data analytics/visualization
-Data Splitting  
-Feature engineering
-Creating batches to feed into training
-
-
-### Model definitions
-
-
-### Model training
-
-### Model evaluation
-
-### Monitoring
 ## File structure
 ```
 ├── LICENSE
