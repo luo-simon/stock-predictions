@@ -23,7 +23,7 @@ def eval():
     # Plot
     plot(preds, y_test)
 
-    return r2, mse, rmse, mae, mape
+    return preds, y_test
 
 
 if __name__ == "__main__":

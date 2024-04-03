@@ -28,7 +28,7 @@ training:
 mlflow:
   mlruns_path: 'models'
   tracking_uri: 'http://localhost:5000'
-  experiment_name: 'lstm'
+  experiment_name: 'lstm_tuning'
   tags :
     state : "dev"
 

@@ -1,2 +1,1 @@
-def model(input):
-    return input
+from sklearn.linear_model import LinearRegression

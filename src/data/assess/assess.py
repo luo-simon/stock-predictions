@@ -37,10 +37,14 @@ def add_technical_indicators(df):
         df["Close"], timeperiod=20, nbdevup=2, nbdevdn=2, matype=0
     )
     ## Simple Moving Average
+    df["SMA_3"] = talib.SMA(df["Close"], timeperiod=3)
+    df["SMA_5"] = talib.SMA(df["Close"], timeperiod=5)
     df["SMA_10"] = talib.SMA(df["Close"], timeperiod=10)
     df["SMA_20"] = talib.SMA(df["Close"], timeperiod=20)
     df["SMA_50"] = talib.SMA(df["Close"], timeperiod=50)
     ## Exponential Moving Average
+    df["EMA_3"] = talib.EMA(df["Close"], timeperiod=3)
+    df["EMA_5"] = talib.EMA(df["Close"], timeperiod=5)
     df["EMA_10"] = talib.EMA(df["Close"], timeperiod=10)
     df["EMA_20"] = talib.EMA(df["Close"], timeperiod=20)
     df["EMA_50"] = talib.EMA(df["Close"], timeperiod=50)
@@ -49,7 +53,7 @@ def add_technical_indicators(df):
     # Average Directional Movement Index
     df["ADX"] = talib.ADX(df["High"], df["Low"], df["Close"], timeperiod=14)
     # Aroon
-    df["Aroon_down"], df["Aroon_up"] = talib.AROON(df["High"], df["Low"], timeperiod=14)
+    df["aroon_down"], df["aroon_up"] = talib.AROON(df["High"], df["Low"], timeperiod=14)
     # MACD (Moving Average Convergence Divergence)
     df["macd"], df["macdsignal"], df["macdhist"] = talib.MACD(
         df["Close"], fastperiod=12, slowperiod=26, signalperiod=9
@@ -57,7 +61,7 @@ def add_technical_indicators(df):
     # Relative Strength Index (RSI)
     df["RSI_14"] = talib.RSI(df["Close"], timeperiod=14)
     # Stochastic Oscillator
-    df["SlowK"], df["SlowD"] = talib.STOCH(
+    df["slow_k"], df["slow_d"] = talib.STOCH(
         df["High"],
         df["Low"],
         df["Close"],
@@ -68,7 +72,7 @@ def add_technical_indicators(df):
         slowd_matype=0,
     )
     # Williams %R
-    df["Williams %R"] = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)
+    df["williams_r"] = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)
 
     # Volume Indicators
     # Accumulation/Distribution Line
@@ -84,15 +88,24 @@ def add_technical_indicators(df):
 
 
 def generate_features(df):
-    # Labels
+
+    # Transformations
+    df["log_open"] = np.log(df["Open"])
+    df["log_high"] = np.log(df["High"])
+    df["log_low"] = np.log(df["Low"])
+    df["log_close"] = np.log(df["Close"])
+    df["log_volume"] = np.log(df["Volume"])
+
+    # Target
     df["Close Forecast"] = df["Close"].shift(-1)
+    # df["log Close Forecast"] = np.log(df["Close Forecast"])
 
     # Close Price Lagged
-    df["Close_T-1"] = df["Close"].shift(1)  # Lag of 1 day
-    df["Close_T-2"] = df["Close"].shift(2)  # Lag of 2 days
-    df["Close_T-3"] = df["Close"].shift(3)  # Lag of 3 days
-    df["Close_T-4"] = df["Close"].shift(4)  # Lag of 4 days
-    df["Close_T-5"] = df["Close"].shift(5)  # Lag of 2 days
+    df["close_t-1"] = df["Close"].shift(1)  # Lag of 1 day
+    df["close_t-2"] = df["Close"].shift(2)  # Lag of 2 days
+    df["close_t-3"] = df["Close"].shift(3)  # Lag of 3 days
+    df["close_t-4"] = df["Close"].shift(4)  # Lag of 4 days
+    df["close_t-5"] = df["Close"].shift(5)  # Lag of 5 days
 
     # Pct returns
     df["pct_change"] = df["Close"].pct_change()
@@ -100,7 +113,7 @@ def generate_features(df):
     # Log return
     df["log_return"] = np.log(df["Close"] / df["Close"].shift(1))
 
-    # Date-related
+    # Date-related ("categorical")
     df["dayofweek"] = df.index.dayofweek
     df["quarter"] = df.index.quarter
     df["month"] = df.index.month
@@ -109,18 +122,28 @@ def generate_features(df):
     df["dayofmonth"] = df.index.day
     df["weekofyear"] = df.index.isocalendar().week
 
+    # Technical Indicators
+    df = add_technical_indicators(df)
+
+    # Macroeconomic Indicator (FFR)
+    fed_funds = load_csv_to_df("data/external/FEDFUNDS.csv")["FEDFUNDS"].rename(
+        "fed_funds_rate"
+    )
+    fed_funds = fed_funds.reindex(df.index, method="ffill")
+    df = df.join(fed_funds, how="left")
+    df[f"log_fed_funds_rate"] = np.log(df["fed_funds_rate"])
+
     # Market Indices # Todo: Data Leakage
     external_path = "data/external"
     for filename in os.listdir(external_path):
         file_path = os.path.join(external_path, filename)
-        if os.path.isfile(file_path):
+        if os.path.isfile(file_path) and "^" in filename:
+            col_name = filename.split(".")[0]
             index_series = load_csv_to_df(os.path.abspath(file_path))["Close"]
-            index_series = index_series.rename(filename.split(".")[0])
-            index_series = index_series.dropna()
-            df = df.join(index_series, how="left")
-
-    # Technical Indicators
-    df = add_technical_indicators(df)
+            index_series = index_series.rename(col_name)
+            index_series = index_series.reindex(df.index, method="ffill")
+            df = df.join(index_series, how="left").dropna()
+            df[f"log_{col_name}"] = np.log(df[col_name])
 
     return df
 
