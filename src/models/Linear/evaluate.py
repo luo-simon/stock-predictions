@@ -1,5 +1,5 @@
 from src.models.Linear.data import load_data
-from src.misc import split_data, evaluate, plot, load_sklearn_model_from_latest_run
+from src.misc import split_data, evaluate, plot, load_sklearn_model_from_latest_run, load_model_from_experiment
 import pandas as pd
 
 
@@ -12,7 +12,8 @@ def eval():
     y_train, y_val, y_test = split_data(y, verbose=False)
 
     # Load model
-    model = load_sklearn_model_from_latest_run("linear")
+    model = load_model_from_experiment("linear_new", "recent")
+
 
     # Predict
     preds = pd.Series(model.predict(X_test), index=y_test.index)

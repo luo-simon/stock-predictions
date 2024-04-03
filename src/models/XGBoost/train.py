@@ -9,7 +9,6 @@ import xgboost as xgb
 # - create config, and put in model params
 # - separate out train and eval files
 
-
 def train():
     X, y = load_data()
 

@@ -92,8 +92,8 @@ def train(
         "lr": lr,
         "optimizer": optimizer.__class__.__name__,
         "loss": criterion.__class__.__name__,
-        "epochs": num_epochs,
-        "batch size": batch_size,
+        "num_epochs": num_epochs,
+        "batch_size": batch_size,
     }
 
     # Set tracking server uri for logging
