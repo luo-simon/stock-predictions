@@ -1,0 +1,30 @@
+model:
+   dropout: 0.1
+   num_layers: 3
+
+data:
+  # features: ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends',
+  #      'pct_change', 'return', 'dayofweek', 'quarter', 'month',
+  #      'year', 'dayofyear', 'dayofmonth', 'weekofyear', 'upper_band',
+  #      'middle_band', 'lower_band', 'SMA_3', 'SMA_5', 'SMA_10', 'SMA_20',
+  #      'SMA_50', 'EMA_3', 'EMA_5', 'EMA_10', 'EMA_20', 'EMA_50', 'ADX',
+  #      'aroon_down', 'aroon_up', 'macd', 'macdsignal', 'macdhist', 'RSI_14',
+  #      'slow_k', 'slow_d', 'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE',
+  #      'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
+  features: ["Close", "williams_r", "aroon_down", "aroon_up", "TRANGE", "RSI_14", "OBV", "AD"]
+  sequence_len: 10
+
+training:
+  num_epochs: 30
+  lr: 0.001
+
+mlflow:
+  experiment_name: 'transformer'
+
+hyperparameter_tuning:
+  num_epochs: [20, 30]
+  lr: [0.001, 0.01]
+  sequence_len: [5, 10, 30]
+  optimizer: ["Adam"]
+  num_layers: [2, 4, 8]
+  dropout: [0.1, 0.2]

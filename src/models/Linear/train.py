@@ -27,7 +27,7 @@ def train(features=[]):
     model = LinearRegression(fit_intercept=True)
 
     mlflow.set_tracking_uri("http://127.0.0.1:5000/")
-    mlflow.set_experiment("linear_new")
+    mlflow.set_experiment("linear")
     with mlflow.start_run():
         # Log params
         mlflow.log_params({"features": features})
@@ -66,15 +66,13 @@ def train(features=[]):
 
 
 if __name__ == "__main__":
-    features = [
-        "Close",
-        "SMA_5",
-        "williams_r",
-        "TRANGE",
-        "AD",
-        "EMA_50",
-        "log_^FTSE",
-        "log_low",
-        "upper_band",
-    ]
+    features = ['Close', 'Volume', 'Dividends', 'Stock Splits',
+       'close_t-1', 'close_t-2', 'close_t-3', 'close_t-4',
+       'close_t-5', 'pct_change', 'return', 'dayofweek', 'quarter', 'month',
+       'year', 'dayofyear', 'dayofmonth', 'weekofyear', 'upper_band',
+       'middle_band', 'lower_band', 'SMA_3', 'SMA_5', 'SMA_10', 'SMA_20',
+       'SMA_50', 'EMA_3', 'EMA_5', 'EMA_10', 'EMA_20', 'EMA_50', 'ADX',
+       'aroon_down', 'aroon_up', 'macd', 'macdsignal', 'macdhist', 'RSI_14',
+       'slow_k', 'slow_d', 'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE',
+       'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
     train(features=features)

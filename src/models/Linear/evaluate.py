@@ -3,8 +3,7 @@ from src.misc import (
     split_data,
     evaluate,
     plot,
-    load_sklearn_model_from_latest_run,
-    load_model_from_experiment,
+    load_model_from_experiment, load_model_from_run_id
 )
 import pandas as pd
 
@@ -18,7 +17,7 @@ def eval():
     y_train, y_val, y_test = split_data(y, verbose=False)
 
     # Load model
-    model = load_model_from_experiment("linear_new", "recent")
+    model = load_model_from_run_id("59ee53bdc13b4141b7b2acc273d0879f", flavor="sklearn")
 
     # Predict
     preds = pd.Series(model.predict(X_test), index=y_test.index)

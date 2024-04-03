@@ -110,6 +110,16 @@ def create_sequences(Xs, ys, sequence_length):
         y.append(ys[i - 1])
     return np.array(X), np.array(y)
 
+def create_sequence(X, sequence_length):
+    """
+    Given a numpy array, create sequences of a fixed length, where
+    each sequence will be used to predict the closing price of the next day.
+    """
+    out = []
+    for i in range(sequence_length, len(X) + 1):
+        out.append(X[i - sequence_length : i])
+    return np.array(out)
+
 
 def load_pytorch_model_from_latest_run(experiment_name):
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
@@ -148,11 +158,16 @@ def load_model_from_experiment(experiment_name, select_by="rmse"):
 
     assert not runs.empty, "No runs found in specified experiment."
     run_id = runs.iloc[0]["run_id"]
-    model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
+    model = mlflow.sklearn.load_model(f"runs:/{run_id}/model")
     return model
 
 
-def load_model_from_run_id(run_id):
+def load_model_from_run_id(run_id, flavor="pytorch"):
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
-    model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
+    if flavor == "pytorch":
+        model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
+    elif flavor == "sklearn":
+        model = mlflow.sklean.load_model(f"runs:/{run_id}/model")
+    else
+        model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
     return model

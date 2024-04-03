@@ -8,31 +8,27 @@ model:
 
 data:
   features: ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits',
-       'log_open', 'log_high', 'log_low', 'log_close', 'log_volume',
-       'close_t-1', 'close_t-2', 'close_t-3', 'close_t-4',
-       'close_t-5', 'pct_change', 'log_return', 'dayofweek', 'quarter',
-       'month', 'year', 'dayofyear', 'dayofmonth', 'weekofyear', 'upper_band',
+       'dayofweek', 'quarter', 'month',
+       'year', 'dayofyear', 'dayofmonth', 'weekofyear', 'upper_band',
        'middle_band', 'lower_band', 'SMA_3', 'SMA_5', 'SMA_10', 'SMA_20',
        'SMA_50', 'EMA_3', 'EMA_5', 'EMA_10', 'EMA_20', 'EMA_50', 'ADX',
        'aroon_down', 'aroon_up', 'macd', 'macdsignal', 'macdhist', 'RSI_14',
        'slow_k', 'slow_d', 'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE',
-       'fed_funds_rate', 'log_fed_funds_rate', '^N225', 'log_^N225', '^IXIC',
-       'log_^IXIC', '^FTSE', 'log_^FTSE', '^SPX', 'log_^SPX', '^DJI',
-       'log_^DJI']
-  sequence_len: 50
+       'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI'],
+  sequence_len: 
 
 # Training parameters
 training:
-  batch_size: 128
-  num_epochs: 50
+  batch_size: 64
+  num_epochs: 20
   lr: 0.01
   output_path  : 'model'
 
 # Logging and output parameters
 mlflow:
-  mlruns_path: 'models'
+  mlruns_path: 'model'
   tracking_uri: 'http://127.0.0.1:5000'
-  experiment_name: 'lstm_tuning'
+  experiment_name: 'lstm_log_vs_simple'
   tags :
     state : "dev"
 

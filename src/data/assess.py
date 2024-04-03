@@ -90,11 +90,11 @@ def add_technical_indicators(df):
 def generate_features(df):
 
     # Transformations
-    df["log_open"] = np.log(df["Open"])
-    df["log_high"] = np.log(df["High"])
-    df["log_low"] = np.log(df["Low"])
-    df["log_close"] = np.log(df["Close"])
-    df["log_volume"] = np.log(df["Volume"])
+    # df["log_open"] = np.log(df["Open"])
+    # df["log_high"] = np.log(df["High"])
+    # df["log_low"] = np.log(df["Low"])
+    # df["log_close"] = np.log(df["Close"])
+    # df["log_volume"] = np.log(df["Volume"])
 
     # Target
     df["Close Forecast"] = df["Close"].shift(-1)
@@ -110,8 +110,8 @@ def generate_features(df):
     # Pct returns
     df["pct_change"] = df["Close"].pct_change()
 
-    # Log return
-    df["log_return"] = np.log(df["Close"] / df["Close"].shift(1))
+    # Return
+    df["return"] = df["Close"] / df["Close"].shift(1)
 
     # Date-related ("categorical")
     df["dayofweek"] = df.index.dayofweek
@@ -131,7 +131,6 @@ def generate_features(df):
     )
     fed_funds = fed_funds.reindex(df.index, method="ffill")
     df = df.join(fed_funds, how="left")
-    df["log_fed_funds_rate"] = np.log(df["fed_funds_rate"])
 
     # Market Indices # Todo: Data Leakage
     external_path = "data/external"
@@ -143,7 +142,7 @@ def generate_features(df):
             index_series = index_series.rename(col_name)
             index_series = index_series.reindex(df.index, method="ffill")
             df = df.join(index_series, how="left").dropna()
-            df[f"log_{col_name}"] = np.log(df[col_name])
+            # df[f"log_{col_name}"] = np.log(df[col_name])
 
     return df
 

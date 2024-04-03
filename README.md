@@ -40,18 +40,8 @@
     - [x] Ridge L2
 - Logistic
 - [x] LSTM
-    - [ ] Bidirectional LSTM (BiLSTM)
-    - [ ] CNN-BiLSTM
-    - [ ] TCN-BiLSTM
-    - [ ] MDN-BiLSTM
-    - [ ] Attention-BiLSTM
-- [ ] Seq2Seq
-    - [ ] Seq2Seq with Attention
-    - [ ] MultiHeadAttention-BiLSTM
-- [ ] Time2Vec-BiLSTM
-- [ ] Time2Vec with Transformer
-- [ ] Average Ensemble Model
-- [ ] XGB
+- [x] Transformer
+- [x] XGBoost
 ### Model training 
 ### Hyperparameter tuning
 ### Feature Importance // Model Interpretability
