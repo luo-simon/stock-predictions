@@ -8,16 +8,17 @@ from src.misc import (
 import pandas as pd
 
 
-def eval():
+def eval(run_id, features):
     # Load dataset
     X, y = load_data()
-
+    X = X[features]
+    
     # Split
     X_train, X_val, X_test = split_data(X, verbose=False)
     y_train, y_val, y_test = split_data(y, verbose=False)
 
     # Load model
-    model = load_model_from_run_id("59ee53bdc13b4141b7b2acc273d0879f", flavor="sklearn")
+    model = load_model_from_run_id(run_id, flavor="sklearn")
 
     # Predict
     preds = pd.Series(model.predict(X_test), index=y_test.index)
@@ -29,7 +30,3 @@ def eval():
     plot(preds, y_test)
 
     return preds, y_test
-
-
-if __name__ == "__main__":
-    eval()

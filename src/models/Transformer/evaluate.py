@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 import mlflow
-from src.models.LSTM.data import load_data
 from src.misc import (
     split_data,
     evaluate,
@@ -17,61 +16,76 @@ from src.misc import (
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 
+from src.models.Transformer.data import load_data
+
+
 
 def eval(features, sequence_len, run_id):
-    # Load test data
     # Load data
-    X, y = load_data(features=features)
+    X, y = load_data(features=features, sequence_len=sequence_len)
 
     # Split
-    X_train, _, X_test = split_data(X, verbose=False)
-    y_train, _, y_test = split_data(y, verbose=False)
+    X_train, X_val, X_test = split_data(X, verbose=False)
+    y_train, y_val, y_test = split_data(y, verbose=False)
 
-    # Normalisation
-    in_scaler = StandardScaler()
-    out_scaler = StandardScaler()
-    _ = in_scaler.fit_transform(X_train.values)
-    X_test_norm = in_scaler.transform(X_test.values)
-    _ = out_scaler.fit_transform(y_train.values.reshape(-1, 1))
-    y_test_norm = out_scaler.transform(y_test.values.reshape(-1, 1))
 
-    # Sequencing
-    X_test_seq, y_test_seq = create_sequences(X_test_norm, y_test_norm, sequence_len)
+    # Normalise
 
-    # TensorDatasets and DataLoaders
-    test_dataset = TensorDataset(
-        torch.tensor(X_test_seq.astype(np.float32)),
-        torch.tensor(y_test_seq.astype(np.float32)),
-    )
+    #    (n_samples, sequence_len, n_features)
+    # -> (n_samples * sequence_len, n_features)
+    X_train = X_train.reshape(-1, X.shape[2])
+    X_test = X_test.reshape(-1, X.shape[2])
+    y_train = y_train.reshape(-1, 1)
+    y_test = y_test.reshape(-1, 1)
 
+    X_scaler = StandardScaler()
+    X_scaler = X_scaler.fit(X_train)
+    X_train = X_scaler.transform(X_train)
+    X_test = X_scaler.transform(X_test)
+
+    y_scaler = StandardScaler()
+    y_scaler = y_scaler.fit(y_train)
+    y_train = y_scaler.transform(y_train)
+    y_test = y_scaler.transform(y_test)
+
+    X_train = X_train.reshape(-1, sequence_len, len(features))
+    X_test = X_test.reshape(-1, sequence_len, len(features))
+    y_train = y_train.reshape(-1, sequence_len, 1)
+    y_test = y_test.reshape(-1, sequence_len, 1)
+
+    # DataLoaders
+    X_train = torch.FloatTensor(X_train)
+    X_test = torch.FloatTensor(X_test)
+    y_train = torch.FloatTensor(y_train)
+    y_test = torch.FloatTensor(y_test)
+
+    train_dataset = TensorDataset(X_train, y_train)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+
+    test_dataset = TensorDataset(X_test, y_test)
     test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
     model = load_model_from_run_id(run_id)
 
-    # Predict:
-    predictions = []
-    actuals = []
-    for Xs, ys in test_loader:
-        output = model(Xs)
-        predictions.extend(output.flatten().tolist())
-        actuals.extend(ys.flatten().tolist())
-    predictions = np.array(predictions)
-    actuals = np.array(actuals)
+    # Evaluate
+    actuals, predictions = [], []
+    model.eval()
+    with torch.no_grad(): 
+        for X, y in test_loader:
+                    preds = model(X)
+                    preds = preds[:, -1:, :].squeeze()
+                    y = y[:, -1:, :].squeeze()
+                    actuals.extend(y)
+                    predictions.extend(preds)
+    actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1,1))
+    predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1,1))
 
-    predictions_rescaled = out_scaler.inverse_transform(
-        predictions.reshape(-1, 1)
-    ).flatten()
-    actuals_rescaled = out_scaler.inverse_transform(actuals.reshape(-1, 1)).flatten()
-
-    preds = pd.Series(predictions_rescaled, index=y_test[sequence_len - 1 :].index)
-    obs = pd.Series(actuals_rescaled, index=y_test[sequence_len - 1 :].index)
-
-    r2, mse, rmse, mae, mape = evaluate(preds, obs, verbose=True)
+    r2, mse, rmse, mae, mape = evaluate(predictions, actuals, verbose=True)
 
     # Plot
-    plot(preds, obs)
+    plot(predictions, actuals)
 
-    return preds, obs
+    return predictions, actuals
 
 
 if __name__ == "__main__":

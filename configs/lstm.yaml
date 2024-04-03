@@ -2,25 +2,17 @@
 # ------------------------------
 # Data parameters
 model:
-   name : 'lstm'
-   hidden_dim: 64
+   hidden_dim: 256
    num_layers: 2
 
 data:
-  features: ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits',
-       'dayofweek', 'quarter', 'month',
-       'year', 'dayofyear', 'dayofmonth', 'weekofyear', 'upper_band',
-       'middle_band', 'lower_band', 'SMA_3', 'SMA_5', 'SMA_10', 'SMA_20',
-       'SMA_50', 'EMA_3', 'EMA_5', 'EMA_10', 'EMA_20', 'EMA_50', 'ADX',
-       'aroon_down', 'aroon_up', 'macd', 'macdsignal', 'macdhist', 'RSI_14',
-       'slow_k', 'slow_d', 'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE',
-       'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI'],
-  sequence_len: 
+  features: ['Close']
+  sequence_len: 60
 
 # Training parameters
 training:
-  batch_size: 64
-  num_epochs: 20
+  batch_size: 256
+  num_epochs: 50
   lr: 0.01
   output_path  : 'model'
 
@@ -34,10 +26,9 @@ mlflow:
 
 # Grid search:
 hyperparameter_tuning:
-  batch_size: [64, 128, 256]
-  num_epochs: [10, 20, 50]
-  lr: [0.1, 0.01, 0.001]
-  sequence_len: [3, 5, 10, 20, 50]
-  # optimizer: ["Adam"]
-  hidden_dim: [32, 64, 124, 256]
-  num_layers: [2, 4, 8]
+  batch_size: [128]
+  num_epochs: [20]
+  lr: [0.001]
+  sequence_len: [10]
+  hidden_dim: [64]
+  num_layers: [8, 16]

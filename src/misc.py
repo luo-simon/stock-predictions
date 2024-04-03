@@ -167,7 +167,7 @@ def load_model_from_run_id(run_id, flavor="pytorch"):
     if flavor == "pytorch":
         model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
     elif flavor == "sklearn":
-        model = mlflow.sklean.load_model(f"runs:/{run_id}/model")
-    else
+        model = mlflow.sklearn.load_model(f"runs:/{run_id}/model")
+    else:
         model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
     return model
