@@ -2,20 +2,20 @@
 
 ## Implementation Outline
 
-Data Access
+### Data Access
 - Decide on range, split, stock
-Feature Engineering
+### Feature Engineering
 - Technical indicators
 - Market Indices (major 5)
 - Macroeconomic data (FFR)
 - Fundamental Analysis Data 
 - Sentiment Analysis (Difficult to do, no historical source)
-Data preprocessing (+Exploratory Data Analysis)
+### Data preprocessing (+Exploratory Data Analysis)
 - Imputation
 - Outliers
 - Transformation (log: skewed->normal)
 - Scaling (non-target variables, careful no data leakage)
-Feature selection
+### Feature selection
 - Filter
     - Correlation coefficient
     - Mutual information
@@ -28,9 +28,9 @@ Feature selection
 - Embedded
     - Lasso Linear Regression
     - Random Forest Impurity
-Dimensionality reduction
+### Dimensionality reduction
 - PCA
-Model selection 
+### Model selection 
 - Baseline
 - ARIMA
 - Linear
@@ -49,10 +49,10 @@ Model selection
 - Time2Vec with Transformer
 - Average Ensemble Model
 - XGB
-Model training 
-Hyperparameter tuning
-Feature Importance // Model Interpretability
-Final models
+### Model training 
+### Hyperparameter tuning
+### Feature Importance // Model Interpretability
+### Final models
 
 
 
