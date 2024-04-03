@@ -3,13 +3,19 @@
 ## Implementation Outline
 
 ### Data Access
-- Decide on range, split, stock
+- Data source: `yfinance`
+- Columns: `[Open, High, Low, Close, Volume]`
+- 5 year (2018-2023), 80/10/10 split.
 ### Feature Engineering
-- Technical indicators
-- Market Indices (major 5)
-- Macroeconomic data (FFR)
-- Fundamental Analysis Data 
-- Sentiment Analysis (Difficult to do, no historical source)
+- [x] Lagged variables
+- [x] Transformed (logged, % change)
+- [x] Date features (dayofweek, weekofyear)
+- [x] Technical indicators
+- [x] Macroecomic indicators
+    - Market indices (SPX, DJI, IXIC, N225, FTSE)
+    - Fed Funds Rates
+- [ ] Sentiment analysis: difficult to find historical news data
+- [ ] Fundamental analysis features: difficult to locate/parse company financials
 ### Data preprocessing (+Exploratory Data Analysis)
 - Imputation
 - Outliers
