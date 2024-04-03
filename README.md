@@ -75,21 +75,21 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
 ├── figures            <- Generated graphics and figures to be used in reporting
 ├── notebooks          <- Jupyter notebooks 
 ├── requirements.txt   <- The requirements file for reproducing the analysis environment
-├── src                <- Source code for use in this project.
-│   ├── data           
-│   │   ├── access.py  <- Get data 
-│   │   └── assess.py  <- Process data and feature engineering
-│   ├── models         <- Folder for each model   
-│   │   └── example_model 
+└── src                <- Source code for use in this project.
+    ├── data           
+    │   ├── access.py  <- Get data 
+    │   └── assess.py  <- Process data and feature engineering
+    ├── models         <- Folder for each model   
+    │   └── example_model 
     │       ├── data.py     <- Preprocess data to suit input to model
     │       ├── evaluate.py <- Evaluate model on test set
     │       ├── model.py    <- Define model
     │       ├── train.py    <- Train model>
     │       └── tune.py     <- Tune model hyperparameters
-│   │   ...
-│   ├── tests          <- Tests, mirroring models structure
-│   ├── trading        <- Simulating trading strategies based on model predictions
-│   └── visualization  <- Scripts to create exploratory and results oriented visualizations
+    │   ...
+    ├── tests          <- Tests, mirroring models structure
+    ├── trading        <- Simulating trading strategies based on model predictions
+    └── visualization  <- Scripts to create exploratory and results oriented visualizations
 ```
 
 ## Libraries
