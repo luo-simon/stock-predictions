@@ -14,11 +14,11 @@
 - [x] Macroecomic indicators
     - Market indices (SPX, DJI, IXIC, N225, FTSE)
     - Fed Funds Rates
-- [ ] Sentiment analysis: difficult to find historical news data
+- [ ] Sentiment analysis: couldn't find historical news data
 - [ ] Fundamental analysis features: difficult to locate/parse company financials
 ### Data preprocessing
 - [x] Imputation, outliers
-- [x] Scaling (non-target variables, careful no data leakage)
+- [x] Scaling (non-target variables, careful no data leakage) where necessary
 ### Feature selection
 - Filter methods
     - [x] Correlation coefficient
@@ -34,22 +34,29 @@
 - [x] PCA
 ### Model selection 
 - [x] Baseline
-- [ ] ARIMA
+- [x] ARIMA
+    - [ ] ARIMAX
 - [x] Linear
     - [x] Lasso L1
     - [x] Ridge L2
-- Logistic
 - [x] LSTM
-- [x] Transformer
 - [x] XGBoost
+- [x] Transformer
+- [ ] *Effect of encoder/decoder/attention layers*
 ### Model training 
 ### Hyperparameter tuning
 ### Feature Importance // Model Interpretability
-### Final Models
+- [ ] Global Model-Agnostic Methods
+    - [ ] Permutation Feature Importance
+- [ ] Local Model-Agnostic Methods
+    - [ ] Local Surrogate (LIME)
+    - [ ] SHAP (SHapley Additive exPlanations)
+### Trading Simulation
 
-## Evaluation outline
-Todo
-
+## Evaluation
+- [ ] Summary table of results (average evaluation metrics, PnL)
+- [ ] Visualisation of predictions
+- [ ] Compare different models and discuss pros/cons
 
 
 ## Repository overview
@@ -87,7 +94,7 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
     - `yfinance` to interface with Yahoo Finance datasets
     - `ta-lib` to generate technical indicators
 - Machine-Learning
-    - `sklearn`, `pytorch`
+    - `sklearn`, `pytorch`, `statsmodels`
     - `mlflow` for logging model experiments
 - Misc
     - `numpy`, `pandas`, `matplotlib`, `seaborn`, `yaml`
