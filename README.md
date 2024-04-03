@@ -3,7 +3,7 @@
 ## Implementation Outline
 
 ### Data Access
-- Data source: `yfinance`
+- Data source: Yahoo Finance via `yfinance` API
 - Columns: `[Open, High, Low, Close, Volume]`
 - 5 year (2018-2023), 80/10/10 split.
 ### Feature Engineering
@@ -16,72 +16,77 @@
     - Fed Funds Rates
 - [ ] Sentiment analysis: difficult to find historical news data
 - [ ] Fundamental analysis features: difficult to locate/parse company financials
-### Data preprocessing (+Exploratory Data Analysis)
-- Imputation
-- Outliers
-- Transformation (log: skewed->normal)
-- Scaling (non-target variables, careful no data leakage)
+### Data preprocessing
+- [x] Imputation, outliers
+- [x] Scaling (non-target variables, careful no data leakage)
 ### Feature selection
-- Filter
-    - Correlation coefficient
-    - Mutual information
-    - Fisher’s Score
-    - Variance Threshold
-    - F test
+- Filter methods
+    - [x] Correlation coefficient
+    - [x] Mutual information
+    - [ ] Fisher’s Score
 - Wrapper
-    - Recursive feature elimination
-    - Sequential feature selection (forward/backward)
+    - [x] Recursive feature elimination
+    - [x] Sequential feature selection (forward/backward)
 - Embedded
-    - Lasso Linear Regression
-    - Random Forest Impurity
+    - [x] LASSO Regularisation
+    - [x] Random Forest Importance
 ### Dimensionality reduction
-- PCA
+- [x] PCA
 ### Model selection 
-- Baseline
-- ARIMA
-- Linear
-    - Lasso (with regularisation)
+- [x] Baseline
+- [ ] ARIMA
+- [x] Linear
+    - [x] Lasso L1
+    - [x] Ridge L2
 - Logistic
-- LSTM
-    - Bidirectional LSTM (BiLSTM)
-    - CNN-BiLSTM
-    - TCN-BiLSTM
-    - MDN-BiLSTM
-    - Attention-BiLSTM
-- Seq2Seq
-    - Seq2Seq with Attention
-    - MultiHeadAttention-BiLSTM
-- Time2Vec-BiLSTM
-- Time2Vec with Transformer
-- Average Ensemble Model
-- XGB
+- [x] LSTM
+    - [ ] Bidirectional LSTM (BiLSTM)
+    - [ ] CNN-BiLSTM
+    - [ ] TCN-BiLSTM
+    - [ ] MDN-BiLSTM
+    - [ ] Attention-BiLSTM
+- [ ] Seq2Seq
+    - [ ] Seq2Seq with Attention
+    - [ ] MultiHeadAttention-BiLSTM
+- [ ] Time2Vec-BiLSTM
+- [ ] Time2Vec with Transformer
+- [ ] Average Ensemble Model
+- [ ] XGB
 ### Model training 
 ### Hyperparameter tuning
 ### Feature Importance // Model Interpretability
-### Final models
+### Final Models
+
+## Evaluation outlint
+Todo
 
 
 
-## File structure
+## Repository overview
+File structure adapted from *https://drivendata.github.io/cookiecutter-data-science/*
 ```
 ├── LICENSE
-├── README.md
-├── data # Data from third party sources.
-├── models          # Trained and serialized models.
-├── notebooks       # Jupyter notebooks.
-└── src              # Source code for use in this project.
-    ├── data         # Data engineering  scripts.
-    │   ├── access.py # get data
-        └── assess.py # clean data + feature engineering
-    ├── models       # ML model engineering (a folder for each model).
-    │   └── model1 
-    │       ├── hyperparameters_tuning.py # hyperparameter tuning
-    │       ├── model.py # model definition
-    │       ├── predict.py # predict
-    │       ├── preprocess.py # preprocess input data and data
-    │       └── train.py #train
-    └── visualization # Scripts to create exploratory and results
-        │             # oriented visualizations.
-        ├── evaluation.py
-        └── exploration.py
+├── README.md          
+├── data
+│   ├── external       <- Data from third party sources.
+│   ├── processed      <- The final, canonical data sets for modeling.
+│   └── raw            <- The original, immutable data dump.
+├── configs            <- Model configuration files
+├── notebooks          <- Jupyter notebooks 
+├── figures            <- Generated graphics and figures to be used in reporting
+├── src                <- Source code for use in this project.
+│   ├── data           
+│   │   ├── access.py  <- Get data 
+│   │   └── assess.py  <- Process data and feature engineering
+│   ├── models         <- Folder for each model   
+│   │   └── example_model 
+    │       ├── data.py     <- Preprocess data to suit input to model
+    │       ├── evaluate.py <- Evaluate model on test set
+    │       ├── model.py    <- Define model
+    │       ├── train.py    <- Train model>
+    │       └── tune.py     <- Tune model hyperparameters
+│   │   ...
+│   ├── tests          <- Tests, mirroring models structure
+│   ├── trading        <- Simulating trading strategies based on model predictions
+│   └── visualization  <- Scripts to create exploratory and results oriented visualizations
 ```
