@@ -12,6 +12,7 @@ from src.misc import (
     load_model_from_run_id,
     load_pytorch_model_from_latest_run,
     load_model_from_experiment,
+    print_metrics
 )
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
@@ -19,70 +20,74 @@ import pandas as pd
 from src.models.Transformer.data import load_data
 
 
-def eval(features, sequence_len, run_id):
-    # Load data
-    X, y = load_data(features=features, sequence_len=sequence_len)
+def eval(features, sequence_len, run_id, stocks=["aapl"]):
+    metrics = np.array([0.,0.,0.,0.,0.])
+    for stock in stocks:
+        # Load data
+        X, y = load_data(features=features, sequence_len=sequence_len, ticker=stock)
 
-    # Split
-    X_train, X_val, X_test = split_data(X, verbose=False)
-    y_train, y_val, y_test = split_data(y, verbose=False)
+        # Split
+        X_train, X_val, X_test = split_data(X, verbose=False)
+        y_train, y_val, y_test = split_data(y, verbose=False)
 
-    # Normalise
+        # Normalise
 
-    #    (n_samples, sequence_len, n_features)
-    # -> (n_samples * sequence_len, n_features)
-    X_train = X_train.reshape(-1, X.shape[2])
-    X_test = X_test.reshape(-1, X.shape[2])
-    y_train = y_train.reshape(-1, 1)
-    y_test = y_test.reshape(-1, 1)
+        #    (n_samples, sequence_len, n_features)
+        # -> (n_samples * sequence_len, n_features)
+        X_train = X_train.reshape(-1, X.shape[2])
+        X_test = X_test.reshape(-1, X.shape[2])
+        y_train = y_train.reshape(-1, 1)
+        y_test = y_test.reshape(-1, 1)
 
-    X_scaler = StandardScaler()
-    X_scaler = X_scaler.fit(X_train)
-    X_train = X_scaler.transform(X_train)
-    X_test = X_scaler.transform(X_test)
+        X_scaler = StandardScaler()
+        X_scaler = X_scaler.fit(X_train)
+        X_train = X_scaler.transform(X_train)
+        X_test = X_scaler.transform(X_test)
 
-    y_scaler = StandardScaler()
-    y_scaler = y_scaler.fit(y_train)
-    y_train = y_scaler.transform(y_train)
-    y_test = y_scaler.transform(y_test)
+        y_scaler = StandardScaler()
+        y_scaler = y_scaler.fit(y_train)
+        y_train = y_scaler.transform(y_train)
+        y_test = y_scaler.transform(y_test)
 
-    X_train = X_train.reshape(-1, sequence_len, len(features))
-    X_test = X_test.reshape(-1, sequence_len, len(features))
-    y_train = y_train.reshape(-1, sequence_len, 1)
-    y_test = y_test.reshape(-1, sequence_len, 1)
+        X_train = X_train.reshape(-1, sequence_len, len(features))
+        X_test = X_test.reshape(-1, sequence_len, len(features))
+        y_train = y_train.reshape(-1, sequence_len, 1)
+        y_test = y_test.reshape(-1, sequence_len, 1)
 
-    # DataLoaders
-    X_train = torch.FloatTensor(X_train)
-    X_test = torch.FloatTensor(X_test)
-    y_train = torch.FloatTensor(y_train)
-    y_test = torch.FloatTensor(y_test)
+        # DataLoaders
+        X_train = torch.FloatTensor(X_train)
+        X_test = torch.FloatTensor(X_test)
+        y_train = torch.FloatTensor(y_train)
+        y_test = torch.FloatTensor(y_test)
 
-    train_dataset = TensorDataset(X_train, y_train)
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+        train_dataset = TensorDataset(X_train, y_train)
+        train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
-    test_dataset = TensorDataset(X_test, y_test)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+        test_dataset = TensorDataset(X_test, y_test)
+        test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-    model = load_model_from_run_id(run_id)
+        model = load_model_from_run_id(run_id)
 
-    # Evaluate
-    actuals, predictions = [], []
-    model.eval()
-    with torch.no_grad():
-        for X, y in test_loader:
-            preds = model(X)
-            preds = preds[:, -1:, :].squeeze()
-            y = y[:, -1:, :].squeeze()
-            actuals.extend(y)
-            predictions.extend(preds)
-    actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1, 1))
-    predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+        # Evaluate
+        actuals, predictions = [], []
+        model.eval()
+        with torch.no_grad():
+            for X, y in test_loader:
+                preds = model(X)
+                preds = preds[:, -1:, :].squeeze()
+                y = y[:, -1:, :].squeeze()
+                actuals.extend(y)
+                predictions.extend(preds)
+        actuals = y_scaler.inverse_transform(np.array(actuals).reshape(-1, 1))
+        predictions = y_scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
-    r2, mse, rmse, mae, mape = evaluate(predictions, actuals, verbose=True)
+        metrics +=  np.array(evaluate(predictions, actuals, verbose=True))
 
-    # Plot
-    plot(predictions, actuals)
+        # Plot
+        plot(predictions, actuals)
 
+    metrics /= len(stocks)
+    print_metrics(metrics)
     return predictions, actuals
 
 

@@ -13,64 +13,69 @@ from src.misc import (
     load_model_from_run_id,
     load_pytorch_model_from_latest_run,
     load_model_from_experiment,
+    print_metrics
 )
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 
 
-def eval(features, sequence_len, run_id):
-    # Load test data
-    # Load data
-    X, y = load_data(features=features)
+def eval(features, sequence_len, run_id, stocks=["aapl"]):
+    metrics = np.array([0.,0.,0.,0.,0.])
+    for stock in stocks:
+        # Load test data
+        # Load data
+        X, y = load_data(features=features, ticker=stock)
 
-    # Split
-    X_train, _, X_test = split_data(X, verbose=False)
-    y_train, _, y_test = split_data(y, verbose=False)
+        # Split
+        X_train, _, X_test = split_data(X, verbose=False)
+        y_train, _, y_test = split_data(y, verbose=False)
 
-    # Normalisation
-    in_scaler = StandardScaler()
-    out_scaler = StandardScaler()
-    _ = in_scaler.fit_transform(X_train.values)
-    X_test_norm = in_scaler.transform(X_test.values)
-    _ = out_scaler.fit_transform(y_train.values.reshape(-1, 1))
-    y_test_norm = out_scaler.transform(y_test.values.reshape(-1, 1))
+        # Normalisation
+        in_scaler = StandardScaler()
+        out_scaler = StandardScaler()
+        _ = in_scaler.fit_transform(X_train.values)
+        X_test_norm = in_scaler.transform(X_test.values)
+        _ = out_scaler.fit_transform(y_train.values.reshape(-1, 1))
+        y_test_norm = out_scaler.transform(y_test.values.reshape(-1, 1))
 
-    # Sequencing
-    X_test_seq, y_test_seq = create_sequences(X_test_norm, y_test_norm, sequence_len)
+        # Sequencing
+        X_test_seq, y_test_seq = create_sequences(X_test_norm, y_test_norm, sequence_len)
 
-    # TensorDatasets and DataLoaders
-    test_dataset = TensorDataset(
-        torch.tensor(X_test_seq.astype(np.float32)),
-        torch.tensor(y_test_seq.astype(np.float32)),
-    )
+        # TensorDatasets and DataLoaders
+        test_dataset = TensorDataset(
+            torch.tensor(X_test_seq.astype(np.float32)),
+            torch.tensor(y_test_seq.astype(np.float32)),
+        )
 
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-    model = load_model_from_run_id(run_id)
+        model = load_model_from_run_id(run_id)
 
-    # Predict:
-    predictions = []
-    actuals = []
-    for Xs, ys in test_loader:
-        output = model(Xs)
-        predictions.extend(output.flatten().tolist())
-        actuals.extend(ys.flatten().tolist())
-    predictions = np.array(predictions)
-    actuals = np.array(actuals)
+        # Predict:
+        predictions = []
+        actuals = []
+        for Xs, ys in test_loader:
+            output = model(Xs)
+            predictions.extend(output.flatten().tolist())
+            actuals.extend(ys.flatten().tolist())
+        predictions = np.array(predictions)
+        actuals = np.array(actuals)
 
-    predictions_rescaled = out_scaler.inverse_transform(
-        predictions.reshape(-1, 1)
-    ).flatten()
-    actuals_rescaled = out_scaler.inverse_transform(actuals.reshape(-1, 1)).flatten()
+        predictions_rescaled = out_scaler.inverse_transform(
+            predictions.reshape(-1, 1)
+        ).flatten()
+        actuals_rescaled = out_scaler.inverse_transform(actuals.reshape(-1, 1)).flatten()
 
-    preds = pd.Series(predictions_rescaled, index=y_test[sequence_len - 1 :].index)
-    obs = pd.Series(actuals_rescaled, index=y_test[sequence_len - 1 :].index)
+        preds = pd.Series(predictions_rescaled, index=y_test[sequence_len - 1 :].index)
+        obs = pd.Series(actuals_rescaled, index=y_test[sequence_len - 1 :].index)
+        
+        metrics += np.array(evaluate(preds, obs, verbose=True))
+       
+        # Plot
+        plot(preds, obs)
 
-    r2, mse, rmse, mae, mape = evaluate(preds, obs, verbose=True)
-
-    # Plot
-    plot(preds, obs)
-
+    metrics /= len(stocks)
+    print_metrics(metrics)
     return preds, obs
 
 

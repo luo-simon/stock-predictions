@@ -18,7 +18,7 @@
 - [ ] Fundamental analysis features: difficult automate: locate/parse company financials
 ### Data preprocessing
 - [x] Imputation, outliers
-- [x] Scaling (non-target variables, careful no data leakage) where necessary
+- [x] Scaling (careful no data leakage) where necessary
 ### Feature selection
 - Filter methods
     - [x] Correlation coefficient
@@ -62,7 +62,7 @@
 
 ## Remaining Tasks
 - [ ] Feature Importance // Model Interpretability
-- [ ] Collate results + produce visualisations + compare
+- [ ] Run experiment with diff stocks + collate results + produce visualisations + compare
 - [ ] Code clean up
 
 ## Repository overview

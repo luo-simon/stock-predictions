@@ -1,28 +1,29 @@
-from src.models.Baseline.model import model
 from src.models.Baseline.data import load_data
-from src.misc import split_data, evaluate, plot
+from src.misc import split_data, evaluate, plot, print_metrics
+import numpy as np
 
-
-def eval():
+def eval(stocks=["aapl"]):
+    metrics = np.array([0.,0.,0.,0.,0.])
     # Load test data
-    X, y = load_data()
+    for stock in stocks:
+        X, y = load_data(stock)
 
-    # Split
-    _, _, X_test = split_data(X, verbose=False)
-    _, _, y_test = split_data(y, verbose=False)
+        # Split
+        _, _, X_test = split_data(X, verbose=False)
+        _, _, y_test = split_data(y, verbose=False)
 
-    # Load model
-    loaded_model = model
+        # Predict
+        preds = X_test
 
-    # Predict
-    preds = loaded_model(X_test)
+        # Evaluate
+        metrics += np.array(evaluate(preds, y_test, verbose=True))
 
-    # Evaluate
-    evaluate(preds, y_test, verbose=True)
 
-    # Plot
-    plot(preds, y_test)
-
+        # Plot
+        plot(preds, y_test, stock)
+    metrics /= len(stocks)
+    print_metrics(metrics)
+    
     return preds, y_test
 
 

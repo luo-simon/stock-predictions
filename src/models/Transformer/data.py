@@ -7,12 +7,12 @@ from src.misc import load_processed_dataset, create_sequence
 import pandas as pd
 
 
-def load_data(features, sequence_len):
+def load_data(features, sequence_len, ticker="aapl"):
     """
     Returns X and y
     """
     # Feature selection
-    df = load_processed_dataset("aapl", "2018-01-01", "2023-01-1")
+    df = load_processed_dataset(ticker, "2018-01-01", "2023-01-1")
     X = df[features].values
     y = pd.DataFrame(df["Close Forecast"]).values
 

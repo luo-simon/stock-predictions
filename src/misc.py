@@ -63,12 +63,14 @@ def split_data(df, verbose=False):
     return train, val, test
 
 
-def plot(preds, obs):
+def plot(preds, obs, title=""):
     plt.figure(figsize=(16, 6))
     plt.xlabel("Date", fontsize=18)
     plt.ylabel("Close Price", fontsize=18)
     plt.plot(obs, label="Observed")
     plt.plot(preds, label="Predicted")
+    plt.grid(visible=True, axis="y")
+    plt.title(title)
     plt.legend()
     plt.show()
 
@@ -172,3 +174,12 @@ def load_model_from_run_id(run_id, flavor="pytorch"):
     else:
         model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model")
     return model
+
+def print_metrics(metrics):
+    print("Average Evaluation Metrics")
+    print("\tR^2: " + str(metrics[0]))
+    print("\tMSE: " + str(metrics[1]))
+    print("\tRMSE: " + str(metrics[2]))
+    print("\tMAE: " + str(metrics[3]))
+    print("\tMAPE: " + str(metrics[4]))
+    
