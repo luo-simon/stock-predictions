@@ -55,9 +55,9 @@
 
 ## Evaluation
 - [ ] Summary table of results (average evaluation metrics, PnL)
+    - [ ] Interpretation of results
 - [ ] Visualisation of predictions
 - [ ] Compare different models and discuss pros/cons
-
 
 ## Repository overview
 File structure adapted from *https://drivendata.github.io/cookiecutter-data-science/*
