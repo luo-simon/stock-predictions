@@ -15,7 +15,7 @@
     - Market indices (SPX, DJI, IXIC, N225, FTSE)
     - Fed Funds Rates
 - [ ] Sentiment analysis: couldn't find historical news data
-- [ ] Fundamental analysis features: difficult to locate/parse company financials
+- [ ] Fundamental analysis features: difficult automate: locate/parse company financials
 ### Data preprocessing
 - [x] Imputation, outliers
 - [x] Scaling (non-target variables, careful no data leakage) where necessary
@@ -55,9 +55,15 @@
 
 ## Evaluation
 - [ ] Summary table of results (average evaluation metrics, PnL)
+    - [ ] Average across 10 stocks
     - [ ] Interpretation of results
 - [ ] Visualisation of predictions
 - [ ] Compare different models and discuss pros/cons
+
+## Remaining Tasks
+- [ ] Feature Importance // Model Interpretability
+- [ ] Collate results + produce visualisations + compare
+- [ ] Code clean up
 
 ## Repository overview
 File structure adapted from *https://drivendata.github.io/cookiecutter-data-science/*
