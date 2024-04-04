@@ -24,7 +24,7 @@ def eval(stocks=["aapl"]):
     metrics /= len(stocks)
     print_metrics(metrics)
     
-    return preds, y_test
+    return metrics
 
 
 if __name__ == "__main__":
