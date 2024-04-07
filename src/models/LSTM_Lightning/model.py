@@ -18,8 +18,12 @@ class StockPricePredictor(L.LightningModule):
         self.hidden_dim = hidden_dim
 
         self.rmse = MeanSquaredError(squared=False)  # Set squared=False for RMSE
-        
 
+        self.y_scaler = None
+
+    def on_fit_start(self):
+        self.y_scaler = self.trainer.datamodule.y_scaler
+        
     def forward(self, x):
         # h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
         # c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
@@ -32,22 +36,37 @@ class StockPricePredictor(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
-    
+
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_pred = self(x)
         loss = self.criterion(y_pred, y)
-        self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_loss', loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
         y_pred = self(x)
         loss = self.criterion(y_pred, y)
-        rmse = self.rmse(y_pred, y)
         
-        self.log("hp_metric", rmse, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        # Denorm for RMSE
+        y_denorm = self.y_scaler.inverse_transform(y.cpu().numpy())
+        y_pred_denorm = self.y_scaler.inverse_transform(y_pred.cpu().detach().numpy())
+
+        # Convert back to tensor for RMSE calculation
+        y_denorm, y_pred_denorm = torch.tensor(y_denorm, device=self.device), torch.tensor(y_pred_denorm, device=self.device)
+        
+        # Calculate RMSE on denormalized values
+        self.rmse(y_pred_denorm, y_denorm)
+
+        self.log('val_loss', loss)#, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+    
+    def on_validation_epoch_end(self):
+        # Log the aggregated RMSE
+        self.log("hp/rmse", self.rmse.compute())
+        # Reset the metric for the next epoch
+        self.rmse.reset()
+
     
     def test_step(self, batch, batch_idx):
         x, y = batch
