@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from src.misc import load_processed_dataset, split_data, create_sequences
 
 class StockDataModule(L.LightningDataModule):
-    def __init__(self, stock, feature_set, sequence_len=5, batch_size=256):
+    def __init__(self, stock, feature_set, sequence_len=5, batch_size=256, permute_column=None):
         super().__init__()
         self.save_hyperparameters()
 
@@ -14,6 +14,7 @@ class StockDataModule(L.LightningDataModule):
         self.feature_set = feature_set
         self.sequence_len = sequence_len
         self.batch_size = batch_size
+        self.permute_column=permute_column
 
         self.y_scaler = None
 
@@ -22,6 +23,9 @@ class StockDataModule(L.LightningDataModule):
         df = load_processed_dataset(self.stock)
         X = df.drop("Close Forecast", axis=1)[self.feature_set]
         y = df["Close Forecast"]
+
+        if self.permute_column:
+            X[self.permute_column] = np.random.permutation(X[self.permute_column])
 
         X_train, X_val, X_test = split_data(X, verbose=False)
         y_train, y_val, y_test = split_data(y, verbose=False)

@@ -2,3 +2,6 @@
 __pycache__
 mlartifacts
 mlruns
+models
+tb_logs
+checkpoints
