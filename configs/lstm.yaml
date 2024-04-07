@@ -2,16 +2,16 @@
 # ------------------------------
 # Data parameters
 model:
-   hidden_dim: 256
+   hidden_dim: 64
    num_layers: 2
 
 data:
-  features: ['Close']
-  sequence_len: 60
+  features: ['Close', 'Open', 'High', 'Low', 'Volume']
+  sequence_len: 30
 
 # Training parameters
 training:
-  batch_size: 256
+  batch_size: 64
   num_epochs: 50
   lr: 0.01
   output_path  : 'model'
@@ -20,7 +20,7 @@ training:
 mlflow:
   mlruns_path: 'model'
   tracking_uri: 'http://127.0.0.1:5000'
-  experiment_name: 'lstm_log_vs_simple'
+  experiment_name: 'lstm_dev'
   tags :
     state : "dev"
 

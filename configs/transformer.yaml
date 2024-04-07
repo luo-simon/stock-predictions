@@ -12,7 +12,7 @@ data:
   #      'slow_k', 'slow_d', 'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE',
   #      'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
   features: ["Close", "williams_r", "aroon_down", "aroon_up", "TRANGE", "RSI_14", "OBV", "AD"]
-  sequence_len: 10
+  sequence_len: 60
 
 training:
   num_epochs: 30

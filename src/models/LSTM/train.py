@@ -25,16 +25,13 @@ def train(
     num_epochs,
     batch_size,
     lr,
-    output_path,
-    tracking_uri,
     experiment_name,
-    tags,
 ):
     # Load data
     X, y = load_data(features=features)
 
     # Split
-    X_train, X_val, X_test = split_data(X, verbose=False)
+    X_train, X_val, X_test = split_data(X, verbose=True)
     y_train, y_val, y_test = split_data(y, verbose=False)
 
     # Normalisation
@@ -97,7 +94,7 @@ def train(
     }
 
     # Set tracking server uri for logging
-    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
     # Create an MLflow Experiment
     mlflow.set_experiment(experiment_name)
     # Start an MLflow run
@@ -157,9 +154,6 @@ def train(
             {"r2": r2, "mse": mse, "rmse": rmse, "mae": mae, "mape": mape}
         )  # type: ignore
 
-        # Set a tag that we can use to remind ourselves what this run was for
-        mlflow.set_tags(tags)
-
         # Save model:
         inputs, _ = next(iter(train_loader))
         with torch.no_grad():
@@ -167,7 +161,7 @@ def train(
         signature = infer_signature(
             inputs.detach().cpu().numpy(), outputs.detach().cpu().numpy()
         )
-        mlflow.pytorch.log_model(model, output_path, signature=signature)
+        mlflow.pytorch.log_model(model, "model", signature=signature)
 
 
 if __name__ == "__main__":
@@ -187,8 +181,5 @@ if __name__ == "__main__":
         config["training"]["num_epochs"],
         config["training"]["batch_size"],
         config["training"]["lr"],
-        config["training"]["output_path"],
-        config["mlflow"]["tracking_uri"],
         config["mlflow"]["experiment_name"],
-        config["mlflow"]["tags"],
     )

@@ -27,7 +27,7 @@ def eval(features, sequence_len, run_id, stocks=["aapl"]):
         X, y = load_data(features=features, sequence_len=sequence_len, ticker=stock)
 
         # Split
-        X_train, X_val, X_test = split_data(X, verbose=False)
+        X_train, X_val, X_test = split_data(X, verbose=True)
         y_train, y_val, y_test = split_data(y, verbose=False)
 
         # Normalise

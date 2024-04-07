@@ -48,6 +48,18 @@ def add_technical_indicators(df):
     df["EMA_10"] = talib.EMA(df["Close"], timeperiod=10)
     df["EMA_20"] = talib.EMA(df["Close"], timeperiod=20)
     df["EMA_50"] = talib.EMA(df["Close"], timeperiod=50)
+    ## Double Exponential Moving Average
+    df["DEMA_3"] = talib.DEMA(df["Close"], timeperiod=3)
+    df["DEMA_5"] = talib.DEMA(df["Close"], timeperiod=5)
+    df["DEMA_10"] = talib.DEMA(df["Close"], timeperiod=10)
+    df["DEMA_20"] = talib.DEMA(df["Close"], timeperiod=20)
+    df["DEMA_50"] = talib.DEMA(df["Close"], timeperiod=50)
+    ## Triple Exponential Moving Average
+    df["TEMA_3"] = talib.TEMA(df["Close"], timeperiod=3)
+    df["TEMA_5"] = talib.TEMA(df["Close"], timeperiod=5)
+    df["TEMA_10"] = talib.TEMA(df["Close"], timeperiod=10)
+    df["TEMA_20"] = talib.TEMA(df["Close"], timeperiod=20)
+    df["TEMA_50"] = talib.TEMA(df["Close"], timeperiod=50)
 
     # Momentum Indicators
     # Average Directional Movement Index

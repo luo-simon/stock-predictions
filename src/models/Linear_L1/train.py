@@ -24,7 +24,7 @@ def train(alpha=0.1):
     y_train = pd.concat([y_train, y_val])
 
     # Model
-    model = Lasso(alpha=alpha, random_state=42)
+    model = Lasso(alpha=alpha)
 
     with mlflow.start_run() as _:
         # Log params
