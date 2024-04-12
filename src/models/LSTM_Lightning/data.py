@@ -20,7 +20,7 @@ class StockDataModule(L.LightningDataModule):
 
     def setup(self, stage=None):
         # Load and split data
-        df = load_processed_dataset(self.stock)
+        df = load_processed_dataset(self.stock, start_date="20")
         X = df.drop("Close Forecast", axis=1)[self.feature_set]
         y = df["Close Forecast"]
 

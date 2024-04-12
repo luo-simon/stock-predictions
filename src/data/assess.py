@@ -93,6 +93,7 @@ def add_technical_indicators(df):
     df["OBV"] = talib.OBV(df["Close"], df["Volume"])
 
     # Volatility Indicators
+    df["ATR"] = talib.ATR(df["High"], df["Low"], df["Close"], timeperiod=14)
     df["NATR"] = talib.NATR(df["High"], df["Low"], df["Close"], timeperiod=14)
     df["TRANGE"] = talib.TRANGE(df["High"], df["Low"], df["Close"])
 
