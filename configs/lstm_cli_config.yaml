@@ -1,0 +1,48 @@
+# lightning.pytorch==2.2.1
+seed_everything: 42
+trainer:
+  max_epochs: 30
+  log_every_n_steps: 1
+  enable_model_summary: True
+  enable_progress_bar: True
+  deterministic: True
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    init_args:
+      save_dir: logs/
+      name: lstm_experiment
+      default_hp_metric: False
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: models/
+        save_top_k: 1
+        monitor: hp/rmse
+        filename: lstm-{epoch:02d}-{hp/rmse:.2f}
+model:
+  class_path: src.models.LSTM_Lightning.model.StockPricePredictor
+  init_args:
+    sequence_len: 5
+    input_dim: 5 # len(features)
+    hidden_dim: 64
+    num_layers: 3
+    output_dim: 2 # horizon
+    lr: 0.001
+    dropout: 0.0
+data:
+  class_path: src.models.LSTM_Lightning.data.StockDataModule
+  init_args:
+    stock: "brk-b"
+    feature_set: 
+      - Open
+      - High
+      - Low
+      - Close
+      - Volume
+    sequence_len: 5
+    batch_size: 64
+    permute_column: null
+    dataset_len: 5
+    horizon: 2 
+ckpt_path: null
+
