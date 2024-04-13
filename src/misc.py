@@ -109,17 +109,29 @@ def evaluate(predicted, observed, verbose=False):
     return r2, mse, rmse, mae, mape
 
 
-def create_sequences(Xs, ys, sequence_length):
+def create_sequences(X, y, X_seq_len, y_seq_len, y_include_X=False):
     """
-    Given a numpy array, create sequences of a fixed length, where
-    each sequence will be used to predict the closing price of the next day.
+    X : array of feature vectors
+    y : array of target values
+    X_seq_len : number of days data to include in feature samples (i.e. past N stock price data)
+    y_seq_len : number of days data ahead to include in target samples (i.e. next N day forecast)
+    y_include_X: should the y sequences include the X samples too - returned y_seq will be length X_seq_len+y_seq_len.
+
+    Returns
+        X_seq of shape (num_samples, X_seq_len, num_features)
+        y_seq of shape (num_samples, y_seq_len) or (num_samples, y_seq_len+X_seq_len) if y_include_X
     """
-    X = []
-    y = []
-    for i in range(sequence_length, len(Xs) + 1):
-        X.append(Xs[i - sequence_length : i])
-        y.append(ys[i - 1])
-    return np.array(X), np.array(y)
+    assert len(X) == len(y), "Length of feature set and target set not equal, unable to create sequences."
+    X_seq = []
+    y_seq = []
+    
+    for i in range(X_seq_len, len(X) + 2 - y_seq_len):
+        X_seq.append(X[i-X_seq_len : i])
+        y_start = i-1
+        if y_include_X:
+            y_start = y_start - X_seq_len + 1
+        y_seq.append(y[y_start : i+y_seq_len-1])
+    return np.array(X_seq), np.array(y_seq).squeeze(2)
 
 
 def create_sequence(X, sequence_length):

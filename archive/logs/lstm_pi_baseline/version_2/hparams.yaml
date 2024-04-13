@@ -1,0 +1,15 @@
+batch_size: 64
+feature_set:
+- Close
+- Open
+- High
+- Low
+- Volume
+hidden_dim: 64
+input_dim: 5
+lr: 0.01
+num_layers: 2
+output_dim: 5
+permute_column: null
+sequence_len: 30
+stock: aapl

@@ -4,6 +4,8 @@
 model:
    hidden_dim: 64
    num_layers: 2
+   horizon: 3
+   dropout: 0.0
 
 data:
   features: ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits',
@@ -17,26 +19,18 @@ data:
        'macd', 'macdsignal', 'macdhist', 'RSI_14', 'slow_k', 'slow_d',
        'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE', 'fed_funds_rate', '^N225',
        '^IXIC', '^FTSE', '^SPX', '^DJI']
-  sequence_len: 5
-  stock: "aapl"
+  sequence_len: 10
+  stock: "brk-b"
   dataset_len: 5
 
-# Training parameters
 training:
   batch_size: 128
-  num_epochs: 30
+  num_epochs: 20
   lr: 0.001
-  output_path  : 'model'
 
-# Logging and output parameters
-mlflow:
-  mlruns_path: 'model'
-  tracking_uri: 'http://127.0.0.1:5000'
-  experiment_name: 'lstm_dev'
-  tags :
-    state : "dev"
+logging:
+  experiment_name: "lstm"
 
-# Grid search:
 hyperparameter_tuning:
   batch_size: [128]
   num_epochs: [20]
