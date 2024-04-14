@@ -15,7 +15,6 @@ trainer:
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: models/lstm_tune
         save_top_k: 1
         monitor: val_rmse
         filename: epoch{epoch:02d}-val_rmse{val_rmse:.2f}
