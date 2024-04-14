@@ -18,15 +18,21 @@ def load_processed_dataset(ticker, start_date="2018-01-01", end_date="2023-01-01
     df = load_csv_to_df(
         f"/Users/simon/Documents/II/Dissertation/data/processed/{ticker.upper()}.csv"
     )
-    
+
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
     # Check if the start_date is before the first date in the DataFrame
-    assert start_date >= df.index.min(), f"Start date {start_date} is before the DataFrame's earliest date {df.index.min()}."
-    assert end_date <= df.index.max(), f"End date {end_date} is after the DataFrame's latest date {df.index.max()}."
+    assert (
+        start_date >= df.index.min()
+    ), f"Start date {start_date} is before the DataFrame's earliest date {df.index.min()}."
+    assert (
+        end_date <= df.index.max()
+    ), f"End date {end_date} is after the DataFrame's latest date {df.index.max()}."
     # Check if the start date is after the end date after adjustment
     if start_date > end_date:
-        raise ValueError("Start date is after end date after adjustments. No valid data range available.")
+        raise ValueError(
+            "Start date is after end date after adjustments. No valid data range available."
+        )
     return df.loc[start_date:end_date]
 
 
@@ -121,16 +127,18 @@ def create_sequences(X, y, X_seq_len, y_seq_len, y_include_X=False):
         X_seq of shape (num_samples, X_seq_len, num_features)
         y_seq of shape (num_samples, y_seq_len) or (num_samples, y_seq_len+X_seq_len) if y_include_X
     """
-    assert len(X) == len(y), "Length of feature set and target set not equal, unable to create sequences."
+    assert len(X) == len(
+        y
+    ), "Length of feature set and target set not equal, unable to create sequences."
     X_seq = []
     y_seq = []
-    
+
     for i in range(X_seq_len, len(X) + 2 - y_seq_len):
-        X_seq.append(X[i-X_seq_len : i])
-        y_start = i-1
+        X_seq.append(X[i - X_seq_len : i])
+        y_start = i - 1
         if y_include_X:
             y_start = y_start - X_seq_len + 1
-        y_seq.append(y[y_start : i+y_seq_len-1])
+        y_seq.append(y[y_start : i + y_seq_len - 1])
     return np.array(X_seq), np.array(y_seq).squeeze(2)
 
 
