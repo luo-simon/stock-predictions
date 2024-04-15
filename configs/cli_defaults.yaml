@@ -1,0 +1,29 @@
+# lightning.pytorch==2.2.1
+seed_everything: 42
+trainer:
+  max_epochs: 200
+  log_every_n_steps: 1
+  enable_model_summary: False
+  enable_progress_bar: False
+  deterministic: True
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    init_args:
+      save_dir: logs/
+      # name: 
+      default_hp_metric: False
+      log_graph: True
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        save_top_k: 1
+        monitor: val_rmse
+        filename: epoch{epoch:02d}-val_rmse{val_rmse:.2f}
+        auto_insert_metric_name: False
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: val_rmse
+        patience: 30
+        verbose: False
+        mode: min
+        min_delta: 0.0

@@ -1,36 +1,19 @@
-# lightning.pytorch==2.2.1
-seed_everything: 42
-trainer:
-  max_epochs: 100
-  log_every_n_steps: 1
-  enable_model_summary: True
-  enable_progress_bar: True
-  deterministic: True
-  logger:
-    class_path: lightning.pytorch.loggers.TensorBoardLogger
-    init_args:
-      save_dir: logs/
-      name: lstm_brk-b_all-features
-      default_hp_metric: False
-  callbacks:
-    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
-      init_args:
-        save_top_k: 1
-        monitor: val_rmse
-        filename: epoch{epoch:02d}-val_rmse{val_rmse:.2f}
-        auto_insert_metric_name: False
+model_name: lstm_aapl
+fset_name: all
+skip_feature_selection: False
+n_trials: 5
 model:
   class_path: src.models.LSTM_Lightning.model.StockPricePredictor
   init_args:
-    sequence_len: 5
+    sequence_len: 30
     hidden_dim: 64
-    num_layers: 3
+    num_layers: 1
     lr: 0.001
-    dropout: 0.0
+    dropout: 0
 data:
   class_path: src.models.LSTM_Lightning.data.StockDataModule
   init_args:
-    stock: "brk-b"
+    stock: "aapl"
     feature_set: ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits',
       'close_t-1', 'close_t-2', 'close_t-3', 'close_t-4',
        'close_t-5', 'pct_change', 'return', 'dayofweek', 'quarter', 'month',
@@ -42,8 +25,8 @@ data:
        'macd', 'macdsignal', 'macdhist', 'RSI_14', 'slow_k', 'slow_d',
        'williams_r', 'AD', 'OBV', 'NATR', 'TRANGE', 'fed_funds_rate', '^N225',
        '^IXIC', '^FTSE', '^SPX', '^DJI']
-    sequence_len: 5
-    batch_size: 64
+    sequence_len: 30
+    batch_size: 16
     permute_column: null
     dataset_len: 5
     horizon: 5 
