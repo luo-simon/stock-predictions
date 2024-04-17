@@ -1,8 +1,12 @@
+import argparse
+import jsonargparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import mlflow
+# import mlflow
+import warnings
+import logging
 
 
 def load_csv_to_df(path):
@@ -212,3 +216,36 @@ def print_metrics(metrics):
     print("\tRMSE: " + str(metrics[2]))
     print("\tMAE: " + str(metrics[3]))
     print("\tMAPE: " + str(metrics[4]))
+
+
+def update_namespace(original, updates):
+    """Recursively searches and updates Namespace fields only if they already exist in the original Namespace, regardless of depth.
+
+    :param original: original Namespace
+    :type original: Namespace or dict
+    :param updates: dictionary with fields and new values
+    :type updates: dict
+    :return: return updated Namespace
+    :rtype: Namespace
+    """
+    if isinstance(original, jsonargparse.Namespace):
+        original = jsonargparse.namespace_to_dict(original)
+    assert isinstance(original, dict), f"Input not of type Namespace or Dict, but of {type(original)}"
+    assert isinstance(updates, dict), f"Updates not Dict, but {updates}"
+    for k, v in updates.items():
+        if k in original:
+            if isinstance(original[k], dict):
+                update_namespace(original[k], v)
+            else:
+                original[k] = v
+        else:
+            for sub_k, sub_v in original.items():
+                if isinstance(sub_v, dict):
+                    update_namespace(sub_v, updates)
+    return jsonargparse.dict_to_namespace(original)
+
+def filter_stdout():
+    warnings.filterwarnings("ignore", ".*does not have many workers.*")
+    warnings.filterwarnings("ignore", ".*LightningCLI's args parameter is intended to run from within Python.*")
+    
+    logging.getLogger("lightning.pytorch.utilities.rank_zero").setLevel(logging.WARNING) # Info about GPU/TPU/IPU/HPU

@@ -108,10 +108,10 @@ def generate_features(df):
     # df["log_low"] = np.log(df["Low"])
     # df["log_close"] = np.log(df["Close"])
     # df["log_volume"] = np.log(df["Volume"])
+    df["log_return"] = np.log(df["Close"]/df["Close"].shift(1))
 
-    # Target
     df["Close Forecast"] = df["Close"].shift(-1)
-    # df["log Close Forecast"] = np.log(df["Close Forecast"])
+    df["log_return_forecast"] = df["log_return"].shift(-1)
 
     # Close Price Lagged
     df["close_t-1"] = df["Close"].shift(1)  # Lag of 1 day

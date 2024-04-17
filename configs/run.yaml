@@ -1,0 +1,5 @@
+model_name: cnn_1
+stock: jnj
+fset_name: log_return 
+feature_set: ['log_return']
+target_var: log_return_forecast
