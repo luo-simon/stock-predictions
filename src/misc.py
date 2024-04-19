@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
 # import mlflow
 import warnings
 import logging
@@ -102,12 +103,12 @@ def get_mape(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 
-def evaluate(predicted, observed, verbose=False):
-    r2 = r2_score(observed, predicted)
-    mse = mean_squared_error(observed, predicted)
-    rmse = np.sqrt(mean_squared_error(observed, predicted))
-    mae = mean_absolute_error(observed, predicted)
-    mape = get_mape(observed, predicted)
+def evaluate(predicted, actuals, verbose=False):
+    r2 = r2_score(actuals, predicted)
+    mse = mean_squared_error(actuals, predicted)
+    rmse = np.sqrt(mean_squared_error(actuals, predicted))
+    mae = mean_absolute_error(actuals, predicted)
+    mape = get_mape(actuals, predicted)
 
     if verbose:
         print("R^2: " + str(r2))
@@ -230,7 +231,9 @@ def update_namespace(original, updates):
     """
     if isinstance(original, jsonargparse.Namespace):
         original = jsonargparse.namespace_to_dict(original)
-    assert isinstance(original, dict), f"Input not of type Namespace or Dict, but of {type(original)}"
+    assert isinstance(
+        original, dict
+    ), f"Input not of type Namespace or Dict, but of {type(original)}"
     assert isinstance(updates, dict), f"Updates not Dict, but {updates}"
     for k, v in updates.items():
         if k in original:
@@ -244,8 +247,14 @@ def update_namespace(original, updates):
                     update_namespace(sub_v, updates)
     return jsonargparse.dict_to_namespace(original)
 
+
 def filter_stdout():
     warnings.filterwarnings("ignore", ".*does not have many workers.*")
-    warnings.filterwarnings("ignore", ".*LightningCLI's args parameter is intended to run from within Python.*")
-    
-    logging.getLogger("lightning.pytorch.utilities.rank_zero").setLevel(logging.WARNING) # Info about GPU/TPU/IPU/HPU
+    warnings.filterwarnings(
+        "ignore",
+        ".*LightningCLI's args parameter is intended to run from within Python.*",
+    )
+
+    logging.getLogger("lightning.pytorch.utilities.rank_zero").setLevel(
+        logging.WARNING
+    )  # Info about GPU/TPU/IPU/HPU

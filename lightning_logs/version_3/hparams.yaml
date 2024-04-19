@@ -1,0 +1,14 @@
+sequence_len: 20
+in_channels: 1
+out_channels: 16
+kernel_size: 11
+lr: 1.1757318077438867e-06
+momentum: 0.960302021108187
+weight_decay: 0.0005931849898359874
+stock: nvda
+feature_set:
+- log_return
+batch_size: 128
+dataset_len: 15
+horizon: 5
+target_var: log_return_forecast

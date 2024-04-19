@@ -19,11 +19,11 @@ trainer:
         monitor: val_loss
         filename: epoch{epoch:02d}-val_loss{val_loss:.5f}
         auto_insert_metric_name: False
-    # - class_path: lightning.pytorch.callbacks.EarlyStopping
-    #   init_args:
-    #     monitor: val_loss
-    #     patience: 20
-    #     verbose: False
-    #     mode: min
-    #     min_delta: 0.0
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        monitor: val_loss
+        patience: 20
+        verbose: False
+        mode: min
+        min_delta: 0.000001
   

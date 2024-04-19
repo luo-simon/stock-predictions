@@ -1,0 +1,7 @@
+sequence_len: 10
+in_channels: 1
+out_channels: 30
+kernel_size: 10
+lr: 0.001
+momentum: 0
+weight_decay: 0

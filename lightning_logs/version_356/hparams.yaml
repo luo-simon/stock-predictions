@@ -1,0 +1,7 @@
+sequence_len: 5
+in_channels: 1
+out_channels: 32
+kernel_size: 5
+lr: 0.07064521796570225
+momentum: 0.9380314699172329
+weight_decay: 0.0001712259057798863
