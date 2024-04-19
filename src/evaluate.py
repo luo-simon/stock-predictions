@@ -1,20 +1,20 @@
-from unittest import result
+import torch
 import optuna
 import argparse
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import torch
 import seaborn as sns
 import scipy.stats as stats
-
+import matplotlib.pyplot as plt
+from src.misc import load_processed_dataset
 from lightning.pytorch.trainer.trainer import Trainer
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 from src.models.CNN.model import CNNModel
 from src.models.CNN.data import CNNDataModule
-from src.misc import load_processed_dataset
+from src.models.LSTM.model import LSTMModel
+from src.models.LSTM.data import LSTMDataModule
 
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 np.random.seed(42)
 
@@ -69,27 +69,51 @@ def predict(trial: optuna.trial.FrozenTrial):
     "Returns a dataframe with predicted and true values for the model of a given Optuna trial"
     ckpt = trial.user_attrs["ckpt_path"]
     data_hparams = trial.user_attrs["data_hparams"]
+    model_type = trial.user_attrs["model"]
     stock = data_hparams["stock"]
+
+    name_map = {
+        "CNN": (CNNModel, CNNDataModule),
+        "LSTM": (LSTMModel, LSTMDataModule)
+    }
+
+    model = name_map[model_type][0].load_from_checkpoint(ckpt)
+    dm = name_map[model_type][1](**data_hparams)
+    trainer = Trainer()
+    if model_type == "LSTM":
+        y = dm.y
+        val_y = y["2022-01-01":"2023-01-01"].apply(lambda row: row.tolist(), axis=1).rename("One-week Actuals")
+        test_y = y["2023-01-01":].apply(lambda row: row.tolist(), axis=1).rename("One-week Actuals")
+        val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
+        val_preds = torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
+        val_preds = pd.DataFrame(val_preds, index=val_y.index)
+        val_preds = val_preds.apply(lambda row: row.tolist(), axis=1).rename("One-week Predictions").to_frame()
+        test_preds = trainer.predict(model, dm)
+        test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
+        test_preds = pd.DataFrame(test_preds, index=test_y.index)
+        test_preds = test_preds.apply(lambda row: row.tolist(), axis=1).rename("One-week Predictions").to_frame()
+
+        val_df = val_preds.join(val_y)
+        test_df = test_preds.join(test_y)
+        val_df['Predictions'] = val_df['One-week Predictions'].apply(lambda x: x[0] if x else None)
+        val_df['Actuals'] = val_df['One-week Actuals'].apply(lambda x: x[0] if x else None)
+        test_df['Predictions'] = test_df['One-week Predictions'].apply(lambda x: x[0] if x else None)
+        test_df['Actuals'] = test_df['One-week Actuals'].apply(lambda x: x[0] if x else None)
+        return test_df, val_df
 
     data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
     validation_set = data[:"2023-01-01"]
     test_set = data["2023-01-01":]
 
-    name_map = {"CNN": (CNNModel, CNNDataModule)}
-
-    model = name_map["CNN"][0].load_from_checkpoint(ckpt)
-    dm = name_map["CNN"][1](**data_hparams)
-    trainer = Trainer()
-
     validations = trainer.predict(model, dataloaders=dm.val_dataloader())
     validations = (
-        torch.cat(validations, dim=0).squeeze(1).cpu().detach().numpy()
+        torch.cat(validations, dim=0).squeeze().cpu().detach().numpy()
     )  # flatten if more than one batch, then squeeze
     validations = pd.Series(validations, index=validation_set.index, name="Predictions")
 
     predictions = trainer.predict(model, dm)
     predictions = (
-        torch.cat(predictions, dim=0).squeeze(1).cpu().detach().numpy()
+        torch.cat(predictions, dim=0).squeeze().cpu().detach().numpy()
     )  # flatten if more than one batch, then squeeze
     predictions = pd.Series(predictions, index=test_set.index, name="Predictions")
 
@@ -116,6 +140,7 @@ def main(experiment_name):
     print(f"User attributes: {user_attrs_str}")
 
     test_df, val_df = predict(best)
+    print(val_df.head())
 
     zero_series_val = pd.Series(index=val_df.index, data=0)
     val_df["Actual Direction"] = np.sign(val_df["Actuals"])
@@ -355,7 +380,7 @@ def main(experiment_name):
     grid.tight_layout(fig)
 
     # Residuals
-    plt.figure(figsize=(15, 8))
+    fig = plt.figure(figsize=(15, 8))
     residuals = test_df["Actuals"] - test_df["Predictions"]
     grid = plt.GridSpec(2, 2)
 
@@ -400,7 +425,7 @@ def main(experiment_name):
     hist_ax.set_title("Distribution of residuals")
     hist_ax.set_xlabel("Residuals")
     hist_ax.set_ylabel("Density")
-
+    grid.tight_layout(fig)
     plt.show()
 
 
