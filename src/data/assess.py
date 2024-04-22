@@ -5,6 +5,7 @@ from src.misc import load_csv_to_df
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as stats
 
 """Assess the raw data. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
@@ -25,26 +26,43 @@ def preprocess(raw_path, processed_path):
         df = generate_features(df)
         # Assert no missing values after feature generation
         assert df.isna().any(axis=1).sum() == 0, f"Missing values found {file}"
-        
+                
 
+        suffixes = {
+            "" : "Close (log return)",
+            "_open" : "Open (log return)", 
+            "_high": "High (log return)",
+            "_low" : "Low (log return)",
+            "_volume": "Volume (log return)"
+        }
+       
         # Treat outliers
-        fig, axs = plt.subplots(2, 5, sharey=True)
-        sns.histplot(df["log_return"], ax=axs[0][0])
-        sns.histplot(df["log_return_open"], ax=axs[0][1])
-        sns.histplot(df["log_return_high"], ax=axs[0][2])
-        sns.histplot(df["log_return_low"], ax=axs[0][3])
-        sns.histplot(df["log_return_volume"], ax=axs[0][4])
-        df["log_return"] = clip_outliers(df["log_return"])
-        df["log_return_open"] = clip_outliers(df["log_return_open"])
-        df["log_return_high"] = clip_outliers(df["log_return_high"])
-        df["log_return_low"] = clip_outliers(df["log_return_low"])
-        df["log_return_volume"] = clip_outliers(df["log_return_volume"])
-        sns.histplot(df["log_return"], ax=axs[1][0])
-        sns.histplot(df["log_return_open"], ax=axs[1][1])
-        sns.histplot(df["log_return_high"], ax=axs[1][2])
-        sns.histplot(df["log_return_low"], ax=axs[1][3])
-        sns.histplot(df["log_return_volume"], ax=axs[1][4])
-        # plt.show()
+        print(file)
+        fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True) 
+        for i, (k, v) in enumerate(suffixes.items()):
+            sns.histplot(df[f'log_return{k}'], kde=False, ax=axs[i], stat="count")
+            # axs[i].set_title(f'Distribution of {v}')
+            axs[i].set_xlabel(f'{v}')
+            axs[i].legend()
+        fig.tight_layout()
+        
+        df["log_return"] = treat_outliers(df["log_return"])
+        df["log_return_open"] = treat_outliers(df["log_return_open"])
+        df["log_return_high"] = treat_outliers(df["log_return_high"])
+        df["log_return_low"] = treat_outliers(df["log_return_low"])
+        df["log_return_volume"] = treat_outliers(df["log_return_volume"])
+
+        fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True) 
+        for i, (k, v) in enumerate(suffixes.items()):
+            col = df[f'log_return{k}']
+            sns.histplot(col, kde=False, ax=axs[i], stat="count")
+            # axs[i].set_title(f'Distribution of {v}')
+            axs[i].set_xlabel(f'{v}')
+            # x = np.linspace(min(col), max(col), 100)
+            # p = stats.norm.pdf(x, col.mean(), col.std()-0.003)
+            # axs[i].plot(x, p, 'k', linewidth=1, label=f'Normal distribution', linestyle="--")
+        fig.tight_layout()
+        # plt.show() 
 
         df.to_csv(os.path.join(processed_path, file), index=True, header=True)
 
@@ -94,7 +112,7 @@ def add_technical_indicators(df):
     
     return df.iloc[30:]
 
-def clip_outliers(col):
+def treat_outliers(col):
     mean = col.mean()
     std = col.std()
     lower_bound = mean - 3 * std

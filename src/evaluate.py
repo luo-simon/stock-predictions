@@ -16,6 +16,8 @@ from src.models.CNN.model import CNNModel
 from src.models.CNN.data import CNNDataModule
 from src.models.LSTM.model import LSTMModel
 from src.models.LSTM.data import LSTMDataModule
+from src.models.ConvLSTM.model import ConvLSTMModel
+from src.models.ConvLSTM.data import ConvLSTMDataModule
 
 
 np.random.seed(42)
@@ -76,7 +78,8 @@ def predict(trial: optuna.trial.FrozenTrial):
 
     name_map = {
         "CNN": (CNNModel, CNNDataModule),
-        "LSTM": (LSTMModel, LSTMDataModule)
+        "LSTM": (LSTMModel, LSTMDataModule),
+        "ConvLSTM": (ConvLSTMModel, ConvLSTMDataModule)
     }
 
     model = name_map[model_type][0].load_from_checkpoint(ckpt)
@@ -102,26 +105,46 @@ def predict(trial: optuna.trial.FrozenTrial):
         test_df['Predictions'] = test_df['One-week Predictions'].apply(lambda x: x[0] if x else None)
         test_df['Actuals'] = test_df['One-week Actuals'].apply(lambda x: x[0] if x else None)
         return test_df, val_df
+    elif model_type == "CNN":
+        data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
+        validation_set = data[:"2023-01-01"]
+        test_set = data["2023-01-01":]
 
-    data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
-    validation_set = data[:"2023-01-01"]
-    test_set = data["2023-01-01":]
+        val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
+        val_preds = (
+            torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
+        )  # flatten if more than one batch, then squeeze
+        val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
 
-    val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
-    val_preds = (
-        torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
-    )  # flatten if more than one batch, then squeeze
-    val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
+        preds = trainer.predict(model, dm)
+        preds = (
+            torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
+        )  # flatten if more than one batch, then squeeze
+        preds = pd.Series(preds, index=test_set.index, name="Predictions")
+        val_df = validation_set.join(val_preds)
+        val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+        test_df = test_set.join(preds)
+        test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+    elif model_type == "ConvLSTM":
+        data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
+        validation_set = data[:"2023-01-01"]
+        test_set = data["2023-01-01":]
 
-    preds = trainer.predict(model, dm)
-    preds = (
-        torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
-    )  # flatten if more than one batch, then squeeze
-    preds = pd.Series(preds, index=test_set.index, name="Predictions")
-    val_df = validation_set.join(val_preds)
-    val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-    test_df = test_set.join(preds)
-    test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+        val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
+        val_preds = (
+            torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
+        )  # flatten if more than one batch, then squeeze
+        val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
+
+        preds = trainer.predict(model, dm)
+        preds = (
+            torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
+        )  # flatten if more than one batch, then squeeze
+        preds = pd.Series(preds, index=test_set.index, name="Predictions")
+        val_df = validation_set.join(val_preds)
+        val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+        test_df = test_set.join(preds)
+        test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
 
     return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
