@@ -1,7 +1,0 @@
-  class_path: src.models.CNN.data.CNNDataModule
-  init_args:
-    sequence_len: 10
-    batch_size: 64
-    dataset_len: 10
-    horizon: 5 
-

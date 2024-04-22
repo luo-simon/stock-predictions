@@ -1,25 +1,45 @@
 import argparse
 import os
+from sympy import plot
 import talib
 from src.misc import load_csv_to_df
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 """Assess the raw data. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
 
 def preprocess(raw_path, processed_path):
     for file in os.listdir(raw_path):
-        df = load_csv_to_df(os.path.join(raw_path, file))
+        df = load_csv_to_df(os.path.join(raw_path, file))[["Open", "High", "Low", "Close", "Volume"]]
+
+        df = df["1999-01-01":]
+        
+        # Assert no missing values before feature generation
+        assert df.isna().any(axis=1).sum() == 0, f"Missing values found {file}"
+        zeros = df[(df==0).any(axis=1)]
+        if zeros.shape[0] > 0:
+            print(f"Zero values found {file} {zeros}")
+
+        # Generate features
         df = generate_features(df)
+        # Assert no missing values after feature generation
+        assert df.isna().any(axis=1).sum() == 0, f"Missing values found {file}"
+        
 
-        # Remove first 50 rows, as will be null for e.g. SMA_50 and final row, as no label
-        df = df.iloc[50:-1]
-
-        # Ensure no missing values
-        assert df.isna().any(axis=1).sum() == 0
+        # Treat outliers
+        # Create a figure and an array of axes
+        plot_hists(df, ["log_return", "log_return_open", "log_return_low", "log_return_high", "log_return_volume"])
+        df["log_return"] = clip_outliers(df["log_return"])
 
         df.to_csv(os.path.join(processed_path, file), index=True, header=True)
 
+def plot_hists(df, cols):
+    fig, axes = plt.subplots(nrows=1, ncols=5)
+    for ax, col in zip(axes, cols):
+        sns.histplot(df, ax=ax)
+    plt.show()
 
 def add_technical_indicators(df):
     """
@@ -31,109 +51,64 @@ def add_technical_indicators(df):
     Returns:
     pd.DataFrame: The original DataFrame augmented with technical indicators.
     """
-    # Overlap Studies
-    ## Bollinger Bands
-    df["upper_band"], df["middle_band"], df["lower_band"] = talib.BBANDS(
-        df["Close"], timeperiod=20, nbdevup=2, nbdevdn=2, matype=0
-    )
-    ## Simple Moving Average
-    df["SMA_3"] = talib.SMA(df["Close"], timeperiod=3)
-    df["SMA_5"] = talib.SMA(df["Close"], timeperiod=5)
-    df["SMA_10"] = talib.SMA(df["Close"], timeperiod=10)
-    df["SMA_20"] = talib.SMA(df["Close"], timeperiod=20)
-    df["SMA_50"] = talib.SMA(df["Close"], timeperiod=50)
-    ## Exponential Moving Average
-    df["EMA_3"] = talib.EMA(df["Close"], timeperiod=3)
-    df["EMA_5"] = talib.EMA(df["Close"], timeperiod=5)
-    df["EMA_10"] = talib.EMA(df["Close"], timeperiod=10)
-    df["EMA_20"] = talib.EMA(df["Close"], timeperiod=20)
-    df["EMA_50"] = talib.EMA(df["Close"], timeperiod=50)
-    ## Double Exponential Moving Average
-    df["DEMA_3"] = talib.DEMA(df["Close"], timeperiod=3)
-    df["DEMA_5"] = talib.DEMA(df["Close"], timeperiod=5)
-    df["DEMA_10"] = talib.DEMA(df["Close"], timeperiod=10)
-    df["DEMA_20"] = talib.DEMA(df["Close"], timeperiod=20)
-    df["DEMA_50"] = talib.DEMA(df["Close"], timeperiod=50)
-    ## Triple Exponential Moving Average
-    df["TEMA_3"] = talib.TEMA(df["Close"], timeperiod=3)
-    df["TEMA_5"] = talib.TEMA(df["Close"], timeperiod=5)
-    df["TEMA_10"] = talib.TEMA(df["Close"], timeperiod=10)
-    df["TEMA_20"] = talib.TEMA(df["Close"], timeperiod=20)
-    df["TEMA_50"] = talib.TEMA(df["Close"], timeperiod=50)
 
-    # Momentum Indicators
-    # Average Directional Movement Index
-    df["ADX"] = talib.ADX(df["High"], df["Low"], df["Close"], timeperiod=14)
-    # Aroon
-    df["aroon_down"], df["aroon_up"] = talib.AROON(df["High"], df["Low"], timeperiod=14)
-    # MACD (Moving Average Convergence Divergence)
-    df["macd"], df["macdsignal"], df["macdhist"] = talib.MACD(
-        df["Close"], fastperiod=12, slowperiod=26, signalperiod=9
-    )
-    # Relative Strength Index (RSI)
-    df["RSI_14"] = talib.RSI(df["Close"], timeperiod=14)
-    # Stochastic Oscillator
-    df["slow_k"], df["slow_d"] = talib.STOCH(
-        df["High"],
-        df["Low"],
-        df["Close"],
-        fastk_period=5,
-        slowk_period=3,
-        slowk_matype=0,
-        slowd_period=3,
-        slowd_matype=0,
-    )
-    # Williams %R
-    df["williams_r"] = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)
+    ## Moving Averages
+    sma = talib.SMA(df["Close"], timeperiod=10)
+    wma = talib.WMA(df["Close"], timeperiod=10)
+    ema = talib.EMA(df["Close"], timeperiod=10)
+    dema = talib.DEMA(df["Close"], timeperiod=10)
+    tema = talib.TEMA(df["Close"], timeperiod=10)
+    df["sma"] = np.where(df["Close"] > sma, 1, -1)
+    df["wma"] = np.where(df["Close"] > wma, 1, -1)
+    df["ema"] = np.where(df["Close"] > ema, 1, -1)
+    df["dema"] = np.where(df["Close"] > dema, 1, -1)
+    df["tema"] = np.where(df["Close"] > tema, 1, -1)
 
-    # Volume Indicators
-    # Accumulation/Distribution Line
-    df["AD"] = talib.AD(df["High"], df["Low"], df["Close"], df["Volume"])
-    # On-Balance Volume
-    df["OBV"] = talib.OBV(df["Close"], df["Volume"])
+    # Other technical indicators
+    aroon_down, aroon_up = talib.AROON(df["High"], df["Low"], timeperiod=14)    # Aroon
+    rsi = talib.RSI(df["Close"], timeperiod=14)                                 # Relative Strength Index (RSI)
+    willr = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)      # Williams R
+    cci = talib.CCI(df["High"], df["Low"], df["Close"], timeperiod=14)          # CCI
+    ad = talib.AD(df["High"], df["Low"], df["Close"], df["Volume"])             # Acculation/Distribution Line
+    mom = talib.MOM(df["Close"], timeperiod=10)                                 # Momentum
+    slowk, slowd = talib.STOCH(df["High"], df["Low"], df["Close"], fastk_period=5, slowk_period=3, slowk_matype=0, slowd_period=3, slowd_matype=0) # Stochastic K, D
+    macd, macdsignal, macdhist = talib.MACD(df["Close"], fastperiod=12, slowperiod=26, signalperiod=9) # MACD
 
-    # Volatility Indicators
-    df["ATR"] = talib.ATR(df["High"], df["Low"], df["Close"], timeperiod=14)
-    df["NATR"] = talib.NATR(df["High"], df["Low"], df["Close"], timeperiod=14)
-    df["TRANGE"] = talib.TRANGE(df["High"], df["Low"], df["Close"])
+    df["aroon"] = np.where(aroon_up > aroon_down, 1, -1)
+    df["rsi"] = np.where(rsi > 70, 1, np.where(rsi > rsi.shift(1), 1, -1))
+    df["willr"] = np.where(willr > willr.shift(1), 1, -1)
+    df["cci"] = np.where(cci > cci.shift(1), 1, -1)
+    df["ad"] = np.where(ad > ad.shift(1), 1, -1)
+    df["mom"] = np.where(mom > 0, 1, -1)
+    df["slowk"] = np.where(slowk > slowk.shift(1), 1, -1)
+    df["slowd"] = np.where(slowd > slowd.shift(1), 1, -1)
+    df["macd"] = np.where(macd > macd.shift(1), 1, -1)
+    
+    return df.iloc[30:]
 
-    return df
+def clip_outliers(col):
+    mean = col.mean()
+    std = col.std()
+    lower_bound = mean - 3 * std
+    upper_bound = mean + 3 * std
 
+    # Q1 = col.quantile(0.25)
+    # Q3 = col.quantile(0.75)
+    # IQR = Q3 - Q1
+    # lower_bound = Q1 - 1.5 * IQR
+    # upper_bound = Q3 + 1.5 * IQR
+    return col.clip(lower=lower_bound, upper=upper_bound)
 
 def generate_features(df):
 
     # Transformations
-    # df["log_open"] = np.log(df["Open"])
-    # df["log_high"] = np.log(df["High"])
-    # df["log_low"] = np.log(df["Low"])
-    # df["log_close"] = np.log(df["Close"])
-    # df["log_volume"] = np.log(df["Volume"])
     df["log_return"] = np.log(df["Close"] / df["Close"].shift(1))
+    df["log_return_open"] = np.log(df["Open"] / df["Open"].shift(1))
+    df["log_return_high"] = np.log(df["High"] / df["High"].shift(1))
+    df["log_return_low"] = np.log(df["Low"] / df["Low"].shift(1))
+    df["log_return_volume"] = np.log(df["Volume"] / df["Volume"].shift(1))
 
-    df["Close Forecast"] = df["Close"].shift(-1)
     df["log_return_forecast"] = df["log_return"].shift(-1)
-
-    # Close Price Lagged
-    df["close_t-1"] = df["Close"].shift(1)  # Lag of 1 day
-    df["close_t-2"] = df["Close"].shift(2)  # Lag of 2 days
-    df["close_t-3"] = df["Close"].shift(3)  # Lag of 3 days
-    df["close_t-4"] = df["Close"].shift(4)  # Lag of 4 days
-    df["close_t-5"] = df["Close"].shift(5)  # Lag of 5 days
-
-    # Pct returns
-    df["pct_change"] = df["Close"].pct_change()
-
-    # Return
-    df["return"] = df["Close"] / df["Close"].shift(1)
-
-    # Date-related ("categorical")
-    df["dayofweek"] = df.index.dayofweek
-    df["quarter"] = df.index.quarter
-    df["month"] = df.index.month
-    df["year"] = df.index.year
-    df["dayofyear"] = df.index.dayofyear
-    df["dayofmonth"] = df.index.day
-    df["weekofyear"] = df.index.isocalendar().week
 
     # Technical Indicators
     df = add_technical_indicators(df)
@@ -154,8 +129,8 @@ def generate_features(df):
             index_series = load_csv_to_df(os.path.abspath(file_path))["Close"]
             index_series = index_series.rename(col_name)
             index_series = index_series.reindex(df.index, method="ffill")
+            index_series = np.log(index_series/index_series.shift(1)) # Log return
             df = df.join(index_series, how="left").dropna()
-            # df[f"log_{col_name}"] = np.log(df[col_name])
 
     return df
 

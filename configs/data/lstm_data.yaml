@@ -1,8 +1,0 @@
-  class_path: src.models.LSTM_Lightning.data.StockDataModule
-  init_args:
-    sequence_len: 20
-    batch_size: 64
-    dataset_len: 10
-    horizon: 5 
-    # permute_column: null
-

@@ -1,3 +1,4 @@
+from turtle import color
 import torch
 import optuna
 import argparse
@@ -7,6 +8,7 @@ import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from src.misc import load_processed_dataset
+from statsmodels.graphics.tsaplots import plot_acf
 from lightning.pytorch.trainer.trainer import Trainer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
@@ -105,24 +107,23 @@ def predict(trial: optuna.trial.FrozenTrial):
     validation_set = data[:"2023-01-01"]
     test_set = data["2023-01-01":]
 
-    validations = trainer.predict(model, dataloaders=dm.val_dataloader())
-    validations = (
-        torch.cat(validations, dim=0).squeeze().cpu().detach().numpy()
+    val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
+    val_preds = (
+        torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
     )  # flatten if more than one batch, then squeeze
-    validations = pd.Series(validations, index=validation_set.index, name="Predictions")
+    val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
 
-    predictions = trainer.predict(model, dm)
-    predictions = (
-        torch.cat(predictions, dim=0).squeeze().cpu().detach().numpy()
+    preds = trainer.predict(model, dm)
+    preds = (
+        torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
     )  # flatten if more than one batch, then squeeze
-    predictions = pd.Series(predictions, index=test_set.index, name="Predictions")
-
-    val_df = validation_set.join(validations)
+    preds = pd.Series(preds, index=test_set.index, name="Predictions")
+    val_df = validation_set.join(val_preds)
     val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-    test_df = test_set.join(predictions)
+    test_df = test_set.join(preds)
     test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
 
-    return test_df, val_df
+    return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
 
 def main(experiment_name):
@@ -138,18 +139,11 @@ def main(experiment_name):
     print(f"Sampled parameters were {params_str}")
     user_attrs_str = "".join(f"\n\t- {k}: {v}" for k, v in best.user_attrs.items())
     print(f"User attributes: {user_attrs_str}")
-
     test_df, val_df = predict(best)
-    print(val_df.head())
+    evaluate(test_df, val_df)
 
-    zero_series_val = pd.Series(index=val_df.index, data=0)
-    val_df["Actual Direction"] = np.sign(val_df["Actuals"])
-    val_df["Model Direction"] = np.sign(val_df["Predictions"])
-
-    zero_series_test = pd.Series(index=test_df.index, data=0)
-    test_df["Actual Direction"] = np.sign(test_df["Actuals"])
-    test_df["Model Direction"] = np.sign(test_df["Predictions"])
-
+def evaluate(test_df, val_df):
+    # Metrics DF
     index_tuples = [
         ("Validation set", "Model"),
         ("Validation set", "Naïve"),
@@ -171,8 +165,9 @@ def main(experiment_name):
     ]
     multi_columns = pd.MultiIndex.from_tuples(column_tuples)
     metrics_df = pd.DataFrame(index=multi_index, columns=multi_columns)
-
-    # One-day ahead metrics
+    zero_series_val = pd.Series(index=val_df.index, data=0)
+    zero_series_test = pd.Series(index=test_df.index, data=0)
+    # One-day ahead
     one_day_metrics = []
     one_day_metrics.append(
         compute_metrics(
@@ -200,6 +195,12 @@ def main(experiment_name):
     for key, values in one_day_metrics.items():
         metrics_df[("One-day ahead", key)] = values.values
 
+
+    # Trading df
+    val_df["Actual Direction"] = np.sign(val_df["Actuals"])
+    val_df["Model Direction"] = np.sign(val_df["Predictions"])
+    test_df["Actual Direction"] = np.sign(test_df["Actuals"])
+    test_df["Model Direction"] = np.sign(test_df["Predictions"])
     index_tuples = [
         ("Validation set", "Model"),
         ("Validation set", "Buy-and-hold"),
@@ -364,6 +365,7 @@ def main(experiment_name):
         test_df["Predicted Cumsum T+2"]
     )
 
+    
     prices_ax = plt.subplot(grid[2, :])
     prices_ax.plot(test_df["Actual Close Forecast"], label="Actual Close Forecast")
     prices_ax.plot(test_df["Predicted Close T+0"], label="Predicted Close Forecast")
@@ -382,15 +384,26 @@ def main(experiment_name):
     # Residuals
     fig = plt.figure(figsize=(15, 8))
     residuals = test_df["Actuals"] - test_df["Predictions"]
-    grid = plt.GridSpec(2, 2)
+    val_residuals = val_df["Actuals"] - val_df["Predictions"]
 
+    # Prediction Intervals
+    interval = 1.96 * val_residuals.std()
+    test_df["lo"] = test_df["Predictions"] - interval 
+    test_df["hi"] = test_df["Predictions"] + interval 
+
+    print(test_df.sample(5))
+    grid = plt.GridSpec(2, 3)
+
+    # Actuals and Predicted Time Series
     preds_ax = plt.subplot(grid[0, 0])
     preds_ax.plot(test_df.index, test_df["Actuals"], label="Actuals")
-    preds_ax.plot(test_df.index, test_df["Predictions"], label="Predictions")
+    preds_ax.plot(test_df.index, test_df["Predictions"], label="Predictions", color="orange")
+    preds_ax.fill_between(test_df.index, test_df["lo"], test_df["hi"], color="orange", alpha=0.2)
     preds_ax.set_xlabel("Date")
     preds_ax.set_ylabel("Values")
     preds_ax.set_title("Actual and Predicted Time Series ")
     preds_ax.legend()
+    preds_ax.grid(True, alpha=0.2)
 
     corr_ax = plt.subplot(grid[0, 1])
     corr_ax.scatter(
@@ -414,6 +427,7 @@ def main(experiment_name):
     timeseries_ax.set_title("Residuals Time Series")
     timeseries_ax.set_xlabel("Date")
     timeseries_ax.set_ylabel("Residuals")
+    timeseries_ax.grid(True, alpha=0.2)
 
     # Histogram with normal distribution fit
     hist_ax = plt.subplot(grid[1, 1])
@@ -425,6 +439,14 @@ def main(experiment_name):
     hist_ax.set_title("Distribution of residuals")
     hist_ax.set_xlabel("Residuals")
     hist_ax.set_ylabel("Density")
+    
+    # ACF Plot
+    acf_ax = plt.subplot(grid[0, 2])
+    plot_acf(residuals, ax=acf_ax, alpha=.05, title="ACF Plot of Reisduals", zero=False)
+    acf_ax.set_xlabel("Lag")
+    acf_ax.set_ylabel("ACF")
+    acf_ax.grid(True, alpha=0.2)
+
     grid.tight_layout(fig)
     plt.show()
 

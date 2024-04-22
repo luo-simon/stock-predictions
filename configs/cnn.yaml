@@ -1,4 +1,0 @@
-experiment_name: cnn_testing_experiment_2
-data.feature_set: ["log_return"]
-n_trials: 3
-trainer.max_epochs: 100
