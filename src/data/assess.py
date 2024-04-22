@@ -1,6 +1,5 @@
 import argparse
 import os
-from sympy import plot
 import talib
 from src.misc import load_csv_to_df
 import numpy as np
@@ -29,17 +28,26 @@ def preprocess(raw_path, processed_path):
         
 
         # Treat outliers
-        # Create a figure and an array of axes
-        plot_hists(df, ["log_return", "log_return_open", "log_return_low", "log_return_high", "log_return_volume"])
+        fig, axs = plt.subplots(2, 5, sharey=True)
+        sns.histplot(df["log_return"], ax=axs[0][0])
+        sns.histplot(df["log_return_open"], ax=axs[0][1])
+        sns.histplot(df["log_return_high"], ax=axs[0][2])
+        sns.histplot(df["log_return_low"], ax=axs[0][3])
+        sns.histplot(df["log_return_volume"], ax=axs[0][4])
         df["log_return"] = clip_outliers(df["log_return"])
+        df["log_return_open"] = clip_outliers(df["log_return_open"])
+        df["log_return_high"] = clip_outliers(df["log_return_high"])
+        df["log_return_low"] = clip_outliers(df["log_return_low"])
+        df["log_return_volume"] = clip_outliers(df["log_return_volume"])
+        sns.histplot(df["log_return"], ax=axs[1][0])
+        sns.histplot(df["log_return_open"], ax=axs[1][1])
+        sns.histplot(df["log_return_high"], ax=axs[1][2])
+        sns.histplot(df["log_return_low"], ax=axs[1][3])
+        sns.histplot(df["log_return_volume"], ax=axs[1][4])
+        # plt.show()
 
         df.to_csv(os.path.join(processed_path, file), index=True, header=True)
 
-def plot_hists(df, cols):
-    fig, axes = plt.subplots(nrows=1, ncols=5)
-    for ax, col in zip(axes, cols):
-        sns.histplot(df, ax=ax)
-    plt.show()
 
 def add_technical_indicators(df):
     """
