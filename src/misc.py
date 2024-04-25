@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import optuna
 
 # import mlflow
 import warnings
@@ -258,3 +259,37 @@ def filter_stdout():
     logging.getLogger("lightning.pytorch.utilities.rank_zero").setLevel(
         logging.WARNING
     )  # Info about GPU/TPU/IPU/HPU
+
+
+def get_one_week_predictions(df):
+    """Takes in one-day ahead predictions and computes the one-week ahead predictions
+
+    :param df: DataFrame with Predictions and Actuals columns
+    :type df: DataFrame with updated Predictions and Actuals (where each element is list of size 5)
+    """
+    print(df)
+
+    return df
+
+def load_trial_from_experiment(experiment_name, trial_num=None):
+    print(f"Loading {experiment_name}.")
+    study = optuna.load_study(
+        study_name=experiment_name, storage="sqlite:///optuna_studies.db"
+    )
+
+    trial = study.best_trial
+    print(
+        f"Best trial was trial number {trial.number} with validation loss of {trial.value}. Run completed at {trial.datetime_complete}"
+    )
+    if trial_num:
+        trial = study.get_trials()[trial_num]
+        print(
+            f"Evaluating specified trial number was {trial.number} with validation loss of {trial.value}. Run completed at {trial.datetime_complete}"
+        )
+
+    params_str = "".join(f"\n\t- {k}: {v}" for k, v in trial.params.items())
+    print(f"Sampled parameters were {params_str}")
+    user_attrs_str = "".join(f"\n\t- {k}: {v}" for k, v in trial.user_attrs.items())
+    print(f"User attributes: {user_attrs_str}")
+    
+    return trial

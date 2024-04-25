@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from src.misc import load_processed_dataset
+from src.misc import load_processed_dataset, load_trial_from_experiment
 from statsmodels.graphics.tsaplots import plot_acf
 from lightning.pytorch.trainer.trainer import Trainer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -19,9 +19,13 @@ from src.models.LSTM.data import LSTMDataModule
 from src.models.ConvLSTM.model import ConvLSTMModel
 from src.models.ConvLSTM.data import ConvLSTMDataModule
 
+from statsmodels.tsa.arima.model import ARIMA
+
 
 np.random.seed(42)
-
+pd.options.display.float_format = "{:,.8f}".format
+feature_set =  ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
+    
 
 def compute_metrics(predicted, actuals, verbose=False):
     """
@@ -69,9 +73,11 @@ def calculate_future_prices(row, horizon=5):
     return future_prices
 
 
-def predict(trial: optuna.trial.FrozenTrial):
+def predict(trial: optuna.trial.FrozenTrial, best):
     "Returns a dataframe with predicted and true values for the model of a given Optuna trial"
     ckpt = trial.user_attrs["ckpt_path"]
+    if not best:
+        ckpt = trial.user_attrs["last_ckpt_path"]
     data_hparams = trial.user_attrs["data_hparams"]
     model_type = trial.user_attrs["model"]
     stock = data_hparams["stock"]
@@ -79,7 +85,7 @@ def predict(trial: optuna.trial.FrozenTrial):
     name_map = {
         "CNN": (CNNModel, CNNDataModule),
         "LSTM": (LSTMModel, LSTMDataModule),
-        "ConvLSTM": (ConvLSTMModel, ConvLSTMDataModule)
+        "ConvLSTM": (ConvLSTMModel, ConvLSTMDataModule),
     }
 
     model = name_map[model_type][0].load_from_checkpoint(ckpt)
@@ -87,26 +93,52 @@ def predict(trial: optuna.trial.FrozenTrial):
     trainer = Trainer()
     if model_type == "LSTM":
         y = dm.y
-        val_y = y["2022-01-01":"2023-01-01"].apply(lambda row: row.tolist(), axis=1).rename("One-week Actuals")
-        test_y = y["2023-01-01":].apply(lambda row: row.tolist(), axis=1).rename("One-week Actuals")
+        val_y = (
+            y["2022-01-01":"2023-01-01"]
+            .apply(lambda row: row.tolist(), axis=1)
+            .rename("One-week Actuals")
+        )
+        test_y = (
+            y["2023-01-01":]
+            .apply(lambda row: row.tolist(), axis=1)
+            .rename("One-week Actuals")
+        )
         val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
         val_preds = torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
         val_preds = pd.DataFrame(val_preds, index=val_y.index)
-        val_preds = val_preds.apply(lambda row: row.tolist(), axis=1).rename("One-week Predictions").to_frame()
+        val_preds = (
+            val_preds.apply(lambda row: row.tolist(), axis=1)
+            .rename("One-week Predictions")
+            .to_frame()
+        )
         test_preds = trainer.predict(model, dm)
         test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
         test_preds = pd.DataFrame(test_preds, index=test_y.index)
-        test_preds = test_preds.apply(lambda row: row.tolist(), axis=1).rename("One-week Predictions").to_frame()
+        test_preds = (
+            test_preds.apply(lambda row: row.tolist(), axis=1)
+            .rename("One-week Predictions")
+            .to_frame()
+        )
 
         val_df = val_preds.join(val_y)
         test_df = test_preds.join(test_y)
-        val_df['Predictions'] = val_df['One-week Predictions'].apply(lambda x: x[0] if x else None)
-        val_df['Actuals'] = val_df['One-week Actuals'].apply(lambda x: x[0] if x else None)
-        test_df['Predictions'] = test_df['One-week Predictions'].apply(lambda x: x[0] if x else None)
-        test_df['Actuals'] = test_df['One-week Actuals'].apply(lambda x: x[0] if x else None)
+        val_df["Predictions"] = val_df["One-week Predictions"].apply(
+            lambda x: x[0] if x else None
+        )
+        val_df["Actuals"] = val_df["One-week Actuals"].apply(
+            lambda x: x[0] if x else None
+        )
+        test_df["Predictions"] = test_df["One-week Predictions"].apply(
+            lambda x: x[0] if x else None
+        )
+        test_df["Actuals"] = test_df["One-week Actuals"].apply(
+            lambda x: x[0] if x else None
+        )
         return test_df, val_df
     elif model_type == "CNN":
-        data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
+        data = load_processed_dataset(
+            stock, start_date="2022-01-01", end_date="2024-01-01"
+        )
         validation_set = data[:"2023-01-01"]
         test_set = data["2023-01-01":]
 
@@ -126,7 +158,9 @@ def predict(trial: optuna.trial.FrozenTrial):
         test_df = test_set.join(preds)
         test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
     elif model_type == "ConvLSTM":
-        data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
+        data = load_processed_dataset(
+            stock, start_date="2022-01-01", end_date="2024-01-01"
+        )
         validation_set = data[:"2023-01-01"]
         test_set = data["2023-01-01":]
 
@@ -148,22 +182,51 @@ def predict(trial: optuna.trial.FrozenTrial):
 
     return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
+def predict_arima(trial: optuna.trial.FrozenTrial):
+    df = load_processed_dataset(stock, start_date=f"{2024-dataset_len}-01-01", end_date="2024-01-01")
+    drop_cols = [c for c in df.columns if "forecast" in c.lower()]
+    X = df.drop(drop_cols, axis=1)[feature_set]
+    y = df["log_return_forecast"]
+    
+    X_train, X_val, X_test = X[:"2022-01-01"], X["2022-01-01":"2023-01-01"], X["2023-01-01":]
+    y_train, y_val, y_test = y[:"2022-01-01"], y["2022-01-01":"2023-01-01"], y["2023-01-01":]
 
-def main(experiment_name):
-    print(f"Loading {experiment_name}.")
-    study = optuna.load_study(
-        study_name=experiment_name, storage="sqlite:///optuna_studies.db"
-    )
-    best = study.best_trial
-    print(
-        f"Best trial was trial number {best.number} with validation loss of {best.value}. Run completed at {best.datetime_complete}"
-    )
-    params_str = "".join(f"\n\t- {k}: {v}" for k, v in best.params.items())
-    print(f"Sampled parameters were {params_str}")
-    user_attrs_str = "".join(f"\n\t- {k}: {v}" for k, v in best.user_attrs.items())
-    print(f"User attributes: {user_attrs_str}")
-    test_df, val_df = predict(best)
+
+    p, d = trial.user_attrs["p"], trial.user_attrs["d"]
+    model = ARIMA(endog=y_train, exog=X_train, order=(p, 0, q))
+    fit_res = model.fit()
+
+    model = ARIMA(y_val, order=(p, 0, q))
+    res = model.filter(fit_res.params)
+    predict = res.get_prediction()
+    preds = predict.predicted_mean
+
+    trial.set_user_attr("summary", str(fit_res.summary()))
+
+    error = ((y_val - preds) ** 2).mean()
+    return error
+
+def main(experiment_name, trial_num, best):
+    model_type = experiment_name.split("_")[0]
+    stock =  experiment_name.split("_")[1]
+    trial = load_trial_from_experiment(experiment_name, trial_num)
+    if model_type == "LR":
+        pass
+    elif model_type == "ARIMA":
+        pass
+    elif model_type == "RF":
+        pass
+    elif model_type == "CNN":
+        test_df, val_df = predict(trial, best)
+    elif model_type == "LSTM":
+        test_df, val_df = predict(trial, best)
+    elif model_type == "ConvLSTM":
+        test_df, val_df = predict(trial, best)
+    else:
+        print("Model type not recognised. Check experiment name is correctly named/typed.")
+        
     evaluate(test_df, val_df)
+
 
 def evaluate(test_df, val_df):
     # Metrics DF
@@ -218,7 +281,6 @@ def evaluate(test_df, val_df):
     for key, values in one_day_metrics.items():
         metrics_df[("One-day ahead", key)] = values.values
 
-
     # Trading df
     val_df["Actual Direction"] = np.sign(val_df["Actuals"])
     val_df["Model Direction"] = np.sign(val_df["Predictions"])
@@ -230,7 +292,7 @@ def evaluate(test_df, val_df):
         ("Test set", "Model"),
         ("Test set", "Buy-and-hold"),
     ]
-    multi_index = pd.MultiIndex.from_tuples(index_tuples, names=["", ""])
+    multi_index = pd.MultiIndex.from_tuples(index_tuples)
     trading_df = pd.DataFrame(
         index=multi_index, columns=["PnL", "Std of returns", "Accuracy"]
     )
@@ -366,42 +428,51 @@ def evaluate(test_df, val_df):
 
     # Conversion back into price
     initial_price = 1
-    test_df["Actual Close Forecast"] = initial_price * np.exp(
-        test_df["Actuals"].cumsum()
-    )
-    test_df["Close"] = test_df["Actual Close Forecast"].shift(
-        1, fill_value=initial_price
-    )
+    test_df["Actual Close Forecast"] = initial_price * np.exp(test_df["Actuals"].cumsum())
+    test_df["Close"] = test_df["Actual Close Forecast"].shift(1, fill_value=initial_price)
+    val_df["Actual Close Forecast"] = initial_price * np.exp(val_df["Actuals"].cumsum())
+    val_df["Close"] = val_df["Actual Close Forecast"].shift(1, fill_value=initial_price)
 
-    test_df["Predicted Cumsum T+1"] = (
-        test_df["Predictions"].rolling(window=2).sum().shift(-1)
-    )
-    test_df["Predicted Cumsum T+2"] = (
-        test_df["Predictions"].rolling(window=3).sum().shift(-2)
-    )
+    # test_df["Predicted Cumsum T+1"] = (
+    #     test_df["Predictions"].rolling(window=2).sum().shift(-1)
+    # )
+    # test_df["Predicted Cumsum T+2"] = (
+    #     test_df["Predictions"].rolling(window=3).sum().shift(-2)
+    # )
+
+    # test_df["Predicted Close T+1"] = test_df["Close"] * np.exp(
+    #     test_df["Predicted Cumsum T+1"]
+    # )
+    # test_df["Predicted Close T+2"] = test_df["Close"] * np.exp(
+    #     test_df["Predicted Cumsum T+2"]
+    # )
 
     test_df["Predicted Close T+0"] = test_df["Close"] * np.exp(test_df["Predictions"])
-    test_df["Predicted Close T+1"] = test_df["Close"] * np.exp(
-        test_df["Predicted Cumsum T+1"]
-    )
-    test_df["Predicted Close T+2"] = test_df["Close"] * np.exp(
-        test_df["Predicted Cumsum T+2"]
-    )
-
+    val_df["Predicted Close T+0"] = val_df["Close"] * np.exp(val_df["Predictions"])
     
-    prices_ax = plt.subplot(grid[2, :])
-    prices_ax.plot(test_df["Actual Close Forecast"], label="Actual Close Forecast")
-    prices_ax.plot(test_df["Predicted Close T+0"], label="Predicted Close Forecast")
-    prices_ax.plot(test_df["Close"], label="Naive Close Forecast")
-    for index, row in test_df.iterrows():
-        prices_ax.plot(
-            pd.date_range(start=index, periods=3, freq="B"),
-            [row[f"Predicted Close T+{i}"] for i in range(3)],
-            alpha=0.5,
-        )
+    # Priec Plots
+    prices_ax = plt.subplot(grid[2, 1])
+    prices_ax.plot(test_df["Actual Close Forecast"], label="Actual Close Forecast", linewidth=0.5)
+    prices_ax.plot(test_df["Predicted Close T+0"], label="Predicted", color="red", linewidth=0.5)
+    prices_ax.plot(test_df["Close"], label="Naive", color="lightgreen", linewidth=0.5)
+    # for index, row in test_df.iterrows():
+    #     prices_ax.plot(
+    #         pd.date_range(start=index, periods=3, freq="B"),
+    #         [row[f"Predicted Close T+{i}"] for i in range(3)],
+    #         alpha=0.5,
+    #     )
     prices_ax.set_xlabel("Date")
     prices_ax.set_ylabel("Price")
     prices_ax.legend()
+    
+    prices_ax = plt.subplot(grid[2, 0])
+    prices_ax.plot(val_df["Actual Close Forecast"], label="Actual Close Forecast", linewidth=0.5)
+    prices_ax.plot(val_df["Predicted Close T+0"], label="Predicted", color="red", linewidth=0.5)
+    prices_ax.plot(val_df["Close"], label="Naive", color="lightgreen", linewidth=0.5)
+    prices_ax.set_xlabel("Date")
+    prices_ax.set_ylabel("Price")
+    prices_ax.legend()
+
     grid.tight_layout(fig)
 
     # Residuals
@@ -411,8 +482,8 @@ def evaluate(test_df, val_df):
 
     # Prediction Intervals
     interval = 1.96 * val_residuals.std()
-    test_df["lo"] = test_df["Predictions"] - interval 
-    test_df["hi"] = test_df["Predictions"] + interval 
+    test_df["lo"] = test_df["Predictions"] - interval
+    test_df["hi"] = test_df["Predictions"] + interval
 
     print(test_df.sample(5))
     grid = plt.GridSpec(2, 3)
@@ -420,8 +491,12 @@ def evaluate(test_df, val_df):
     # Actuals and Predicted Time Series
     preds_ax = plt.subplot(grid[0, 0])
     preds_ax.plot(test_df.index, test_df["Actuals"], label="Actuals")
-    preds_ax.plot(test_df.index, test_df["Predictions"], label="Predictions", color="orange")
-    preds_ax.fill_between(test_df.index, test_df["lo"], test_df["hi"], color="orange", alpha=0.2)
+    preds_ax.plot(
+        test_df.index, test_df["Predictions"], label="Predictions", color="orange"
+    )
+    preds_ax.fill_between(
+        test_df.index, test_df["lo"], test_df["hi"], color="orange", alpha=0.2
+    )
     preds_ax.set_xlabel("Date")
     preds_ax.set_ylabel("Values")
     preds_ax.set_title("Actual and Predicted Time Series ")
@@ -462,10 +537,12 @@ def evaluate(test_df, val_df):
     hist_ax.set_title("Distribution of residuals")
     hist_ax.set_xlabel("Residuals")
     hist_ax.set_ylabel("Density")
-    
+
     # ACF Plot
     acf_ax = plt.subplot(grid[0, 2])
-    plot_acf(residuals, ax=acf_ax, alpha=.05, title="ACF Plot of Reisduals", zero=False)
+    plot_acf(
+        residuals, ax=acf_ax, alpha=0.05, title="ACF Plot of Reisduals", zero=False
+    )
     acf_ax.set_xlabel("Lag")
     acf_ax.set_ylabel("ACF")
     acf_ax.grid(True, alpha=0.2)
@@ -481,6 +558,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n", "--name", help="name of the experiment to evaluate", required=True
     )
+    parser.add_argument(
+        "-t",
+        "--trial_num",
+        help="trial number of the experiment to evaluate (lowest validation loss trial selected if not specified)",
+        type=int,
+    )
+    parser.add_argument(
+        "-b",
+        "--best",
+        help="if True, evaluates the best model from trial (lowest validation loss) otherwise, if False, evaluates the last model ",
+        default=True,
+    )
     args = parser.parse_args()
 
-    main(args.name)
+    main(args.name, args.trial_num, args.best)

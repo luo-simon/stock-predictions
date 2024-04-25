@@ -1,5 +1,5 @@
-experiment_name: cnn_2
-stock: jnj
-fset_name: log_return 
-feature_set: ['log_return']
-target_var: log_return_forecast
+seed_everything: False
+experiment_name: CNN_GSPC_ALL_Overfit
+stock: ^GSPC
+data.feature_set: ['log_return']
+trainer.max_epochs: 1000

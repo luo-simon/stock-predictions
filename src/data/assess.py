@@ -10,15 +10,19 @@ import scipy.stats as stats
 """Assess the raw data. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
 
-def preprocess(raw_path, processed_path):
+def preprocess(raw_path, processed_path, plot=False):
     for file in os.listdir(raw_path):
-        df = load_csv_to_df(os.path.join(raw_path, file))[["Open", "High", "Low", "Close", "Volume"]]
+        print(f"Processing {file}")
+
+        df = load_csv_to_df(os.path.join(raw_path, file))[
+            ["Open", "High", "Low", "Close", "Volume"]
+        ]
 
         df = df["1999-01-01":]
-        
+
         # Assert no missing values before feature generation
         assert df.isna().any(axis=1).sum() == 0, f"Missing values found {file}"
-        zeros = df[(df==0).any(axis=1)]
+        zeros = df[(df == 0).any(axis=1)]
         if zeros.shape[0] > 0:
             print(f"Zero values found {file} {zeros}")
 
@@ -26,43 +30,46 @@ def preprocess(raw_path, processed_path):
         df = generate_features(df)
         # Assert no missing values after feature generation
         assert df.isna().any(axis=1).sum() == 0, f"Missing values found {file}"
-                
 
         suffixes = {
-            "" : "Close (log return)",
-            "_open" : "Open (log return)", 
+            "": "Close (log return)",
+            "_open": "Open (log return)",
             "_high": "High (log return)",
-            "_low" : "Low (log return)",
-            "_volume": "Volume (log return)"
+            "_low": "Low (log return)",
+            "_volume": "Volume (log return)",
         }
-       
+
         # Treat outliers
-        print(file)
-        fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True) 
-        for i, (k, v) in enumerate(suffixes.items()):
-            sns.histplot(df[f'log_return{k}'], kde=False, ax=axs[i], stat="count")
-            # axs[i].set_title(f'Distribution of {v}')
-            axs[i].set_xlabel(f'{v}')
-            axs[i].legend()
-        fig.tight_layout()
-        
+        if plot:
+            fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True)
+            for i, (k, v) in enumerate(suffixes.items()):
+                sns.histplot(df[f"log_return{k}"], kde=False, ax=axs[i], stat="count")
+                # axs[i].set_title(f'Distribution of {v}')
+                axs[i].set_xlabel(f"{v}")
+                axs[i].legend()
+            fig.tight_layout()
+
         df["log_return"] = treat_outliers(df["log_return"])
         df["log_return_open"] = treat_outliers(df["log_return_open"])
         df["log_return_high"] = treat_outliers(df["log_return_high"])
         df["log_return_low"] = treat_outliers(df["log_return_low"])
         df["log_return_volume"] = treat_outliers(df["log_return_volume"])
 
-        fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True) 
-        for i, (k, v) in enumerate(suffixes.items()):
-            col = df[f'log_return{k}']
-            sns.histplot(col, kde=False, ax=axs[i], stat="count")
-            # axs[i].set_title(f'Distribution of {v}')
-            axs[i].set_xlabel(f'{v}')
-            # x = np.linspace(min(col), max(col), 100)
-            # p = stats.norm.pdf(x, col.mean(), col.std()-0.003)
-            # axs[i].plot(x, p, 'k', linewidth=1, label=f'Normal distribution', linestyle="--")
-        fig.tight_layout()
-        # plt.show() 
+        indices = ["^N225", "^IXIC", "^FTSE", "^SPX", "^DJI"]
+        for i in indices:
+            df[i] = treat_outliers(df[i])
+
+        if plot:
+            fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True)
+            for i, (k, v) in enumerate(suffixes.items()):
+                col = df[f"log_return{k}"]
+                sns.histplot(col, kde=False, ax=axs[i], stat="count")
+                axs[i].set_xlabel(f"{v}")
+                # x = np.linspace(min(col), max(col), 100)
+                # p = stats.norm.pdf(x, col.mean(), col.std()-0.003)
+                # axs[i].plot(x, p, 'k', linewidth=1, label=f'Normal distribution', linestyle="--")
+            fig.tight_layout()
+            plt.show()
 
         df.to_csv(os.path.join(processed_path, file), index=True, header=True)
 
@@ -91,14 +98,27 @@ def add_technical_indicators(df):
     df["tema"] = np.where(df["Close"] > tema, 1, -1)
 
     # Other technical indicators
-    aroon_down, aroon_up = talib.AROON(df["High"], df["Low"], timeperiod=14)    # Aroon
-    rsi = talib.RSI(df["Close"], timeperiod=14)                                 # Relative Strength Index (RSI)
-    willr = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)      # Williams R
-    cci = talib.CCI(df["High"], df["Low"], df["Close"], timeperiod=14)          # CCI
-    ad = talib.AD(df["High"], df["Low"], df["Close"], df["Volume"])             # Acculation/Distribution Line
-    mom = talib.MOM(df["Close"], timeperiod=10)                                 # Momentum
-    slowk, slowd = talib.STOCH(df["High"], df["Low"], df["Close"], fastk_period=5, slowk_period=3, slowk_matype=0, slowd_period=3, slowd_matype=0) # Stochastic K, D
-    macd, macdsignal, macdhist = talib.MACD(df["Close"], fastperiod=12, slowperiod=26, signalperiod=9) # MACD
+    aroon_down, aroon_up = talib.AROON(df["High"], df["Low"], timeperiod=14)  # Aroon
+    rsi = talib.RSI(df["Close"], timeperiod=14)  # Relative Strength Index (RSI)
+    willr = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)  # Williams R
+    cci = talib.CCI(df["High"], df["Low"], df["Close"], timeperiod=14)  # CCI
+    ad = talib.AD(
+        df["High"], df["Low"], df["Close"], df["Volume"]
+    )  # Acculation/Distribution Line
+    mom = talib.MOM(df["Close"], timeperiod=10)  # Momentum
+    slowk, slowd = talib.STOCH(
+        df["High"],
+        df["Low"],
+        df["Close"],
+        fastk_period=5,
+        slowk_period=3,
+        slowk_matype=0,
+        slowd_period=3,
+        slowd_matype=0,
+    )  # Stochastic K, D
+    macd, macdsignal, macdhist = talib.MACD(
+        df["Close"], fastperiod=12, slowperiod=26, signalperiod=9
+    )  # MACD
 
     df["aroon"] = np.where(aroon_up > aroon_down, 1, -1)
     df["rsi"] = np.where(rsi > 70, 1, np.where(rsi > rsi.shift(1), 1, -1))
@@ -109,10 +129,11 @@ def add_technical_indicators(df):
     df["slowk"] = np.where(slowk > slowk.shift(1), 1, -1)
     df["slowd"] = np.where(slowd > slowd.shift(1), 1, -1)
     df["macd"] = np.where(macd > macd.shift(1), 1, -1)
-    
+
     return df.iloc[30:]
 
-def treat_outliers(col):
+
+def treat_outliers(col, clip=True):
     mean = col.mean()
     std = col.std()
     lower_bound = mean - 3 * std
@@ -123,10 +144,12 @@ def treat_outliers(col):
     # IQR = Q3 - Q1
     # lower_bound = Q1 - 1.5 * IQR
     # upper_bound = Q3 + 1.5 * IQR
-    return col.clip(lower=lower_bound, upper=upper_bound)
+    if clip:
+        return col.clip(lower=lower_bound, upper=upper_bound)
+    return col[(col >= lower_bound) & (col <= upper_bound)]
+
 
 def generate_features(df):
-
     # Transformations
     df["log_return"] = np.log(df["Close"] / df["Close"].shift(1))
     df["log_return_open"] = np.log(df["Open"] / df["Open"].shift(1))
@@ -155,7 +178,7 @@ def generate_features(df):
             index_series = load_csv_to_df(os.path.abspath(file_path))["Close"]
             index_series = index_series.rename(col_name)
             index_series = index_series.reindex(df.index, method="ffill")
-            index_series = np.log(index_series/index_series.shift(1)) # Log return
+            index_series = np.log(index_series / index_series.shift(1))  # Log return
             df = df.join(index_series, how="left").dropna()
 
     return df
