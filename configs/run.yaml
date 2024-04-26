@@ -1,5 +1,8 @@
-seed_everything: False
-experiment_name: CNN_GSPC_ALL_Overfit
-stock: ^GSPC
-data.feature_set: ['log_return']
+seed_everything: 42
+# experiment_name: LSTM_NVDA
+# stock: NVDA
+data.feature_set: ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
+model.in_channels: 25
+# model.input_dim: 25
 trainer.max_epochs: 1000
+

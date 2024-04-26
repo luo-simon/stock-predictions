@@ -293,3 +293,29 @@ def load_trial_from_experiment(experiment_name, trial_num=None):
     print(f"User attributes: {user_attrs_str}")
     
     return trial
+
+
+def load_best_n_trials_from_experiment(experiment_name, n=5):
+    print(f"Loading {experiment_name}.")
+    study = optuna.load_study(
+        study_name=experiment_name, storage="sqlite:///optuna_studies.db"
+    )
+    all_trials = study.get_trials(states=[optuna.trial.TrialState.COMPLETE])
+    seen = set()
+    unique_trials = []
+    for trial in all_trials:
+        if trial.value and trial.value not in seen:
+            seen.add(trial.value)
+            unique_trials.append(trial)
+    unique_trials = sorted(unique_trials, key=lambda x: x.value, reverse=True)[:n]
+
+    for i, trial in enumerate(unique_trials, 1):
+        print(f"Rank {i}: trial no. {trial.number}, value: {trial.value}. Run completed at {trial.datetime_complete}")
+
+    return unique_trials
+
+
+def compute_accuracy(preds, actuals):
+    actual_dir = np.sign(actuals)
+    preds_dir = np.sign(preds)
+    return (actual_dir == preds_dir).astype(int).mean() * 100

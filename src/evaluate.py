@@ -1,4 +1,5 @@
-from turtle import color
+from audioop import avg
+from sklearn.base import validate_parameter_constraints
 import torch
 import optuna
 import argparse
@@ -7,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from src.misc import load_processed_dataset, load_trial_from_experiment
+from src.misc import load_processed_dataset, load_trial_from_experiment, compute_accuracy, load_best_n_trials_from_experiment
 from statsmodels.graphics.tsaplots import plot_acf
 from lightning.pytorch.trainer.trainer import Trainer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -19,15 +20,16 @@ from src.models.LSTM.data import LSTMDataModule
 from src.models.ConvLSTM.model import ConvLSTMModel
 from src.models.ConvLSTM.data import ConvLSTMDataModule
 
-from statsmodels.tsa.arima.model import ARIMA
-
+import src.models.statistical.Linear as Linear
+import src.models.statistical.ARIMA as ARIMA
+import src.models.statistical.RandomForest as RF
 
 np.random.seed(42)
 pd.options.display.float_format = "{:,.8f}".format
 feature_set =  ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
     
 
-def compute_metrics(predicted, actuals, verbose=False):
+def get_ML_metrics(predicted, actuals, verbose=False):
     """
     Returns tuple of (r2, mse, rmse, mae, corr)
     """
@@ -46,18 +48,19 @@ def compute_metrics(predicted, actuals, verbose=False):
     return r2, mse, rmse, mae, corr
 
 
-def backtest(preds_series, actuals_series, buy_and_hold=False, verbose=False):
+def backtest(preds_series, actuals_series, verbose=False):
     action = np.where(preds_series <= 0, "hold", "buy")
-    cumulative_return = 1 * np.exp(
-        (actuals_series * np.where(action == "hold", 0, 1)).cumsum()
-    )
-    if buy_and_hold:
-        cumulative_return = 1 * np.exp(actuals_series.cumsum())
+    returns = np.exp((actuals_series * np.where(action == "hold", 0, 1))) - 1
+    cum_return = (1+returns).cumprod().iloc[-1] - 1
+    avg_daily_return = (cum_return+1)**(1/len(preds_series)) - 1
+    std = returns.std()
+    
     if verbose:
         print(
-            f"Cumulative returns: {cumulative_return.iloc[-1]}. Standard deviation: {cumulative_return.std()}"
+            f"Avg. Daily Return: {avg_daily_return}. Cumulative return: {cum_return}. Standard deviation: {std}"
         )
-    return cumulative_return.iloc[-1], cumulative_return.std()
+
+    return avg_daily_return, std
 
 
 def calculate_future_prices(row, horizon=5):
@@ -182,40 +185,29 @@ def predict(trial: optuna.trial.FrozenTrial, best):
 
     return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
-def predict_arima(trial: optuna.trial.FrozenTrial):
-    df = load_processed_dataset(stock, start_date=f"{2024-dataset_len}-01-01", end_date="2024-01-01")
-    drop_cols = [c for c in df.columns if "forecast" in c.lower()]
-    X = df.drop(drop_cols, axis=1)[feature_set]
-    y = df["log_return_forecast"]
-    
-    X_train, X_val, X_test = X[:"2022-01-01"], X["2022-01-01":"2023-01-01"], X["2023-01-01":]
-    y_train, y_val, y_test = y[:"2022-01-01"], y["2022-01-01":"2023-01-01"], y["2023-01-01":]
 
+def mean_dfs(dfs):
+    dfs = pd.concat(dfs)
+    dfs = dfs.groupby(dfs.index).mean()
+    return dfs
 
-    p, d = trial.user_attrs["p"], trial.user_attrs["d"]
-    model = ARIMA(endog=y_train, exog=X_train, order=(p, 0, q))
-    fit_res = model.fit()
-
-    model = ARIMA(y_val, order=(p, 0, q))
-    res = model.filter(fit_res.params)
-    predict = res.get_prediction()
-    preds = predict.predicted_mean
-
-    trial.set_user_attr("summary", str(fit_res.summary()))
-
-    error = ((y_val - preds) ** 2).mean()
-    return error
-
-def main(experiment_name, trial_num, best):
+def main(experiment_name, trial_num=None, best=True):
     model_type = experiment_name.split("_")[0]
     stock =  experiment_name.split("_")[1]
-    trial = load_trial_from_experiment(experiment_name, trial_num)
-    if model_type == "LR":
-        pass
+
+    trial = None
+    if model_type != "Linear":
+        if trial_num != None:
+            trial = load_trial_from_experiment(experiment_name, trial_num)
+        else:
+            trial = load_best_n_trials_from_experiment(experiment_name, n=1)[0]
+
+    if model_type == "Linear":
+        val_df, test_df = Linear.predict(stock)
     elif model_type == "ARIMA":
-        pass
+        val_df, test_df = ARIMA.predict(stock, trial.params["p"], trial.params["q"])
     elif model_type == "RF":
-        pass
+        val_df, test_df = RF.predict(stock, **trial.params)
     elif model_type == "CNN":
         test_df, val_df = predict(trial, best)
     elif model_type == "LSTM":
@@ -225,8 +217,41 @@ def main(experiment_name, trial_num, best):
     else:
         print("Model type not recognised. Check experiment name is correctly named/typed.")
         
-    evaluate(test_df, val_df)
+    val_metrics =  get_all_metrics(val_df["Predictions"], val_df["Actuals"])
+    val = pd.DataFrame(val_metrics, index=[experiment_name])
+    val.columns = pd.MultiIndex.from_product([["Validation set"], val.columns])
 
+    test_metrics =  get_all_metrics(test_df["Predictions"], test_df["Actuals"])
+    test = pd.DataFrame(test_metrics, index=[experiment_name])
+    test.columns = pd.MultiIndex.from_product([["Test set"], test.columns])
+
+    df = pd.concat([val, test], axis=1)
+    if trial:
+        df["Hyperparameters"] = str(trial.params)
+
+    return df
+
+def get_all_metrics(preds, actuals):
+    # Traditional ML metrics
+    r2, mse, rmse, mae, corr = get_ML_metrics(predicted=preds, actuals=actuals)
+    acc = compute_accuracy(preds, actuals)
+    # Financial metrics
+    avg_daily_return, std = backtest(preds, actuals, verbose=False)
+    risk_adj_return = None
+    if std != 0:
+        risk_adj_return = avg_daily_return/std
+    return {
+        "R2": r2,
+        "MSE": mse,
+        "RMSE": rmse,
+        "MAE": mae,
+        "p": corr,
+        "Accuracy": acc,
+        "Avg. daily return": avg_daily_return,
+        "Std. daily return": std,
+        "Risk adj. return": risk_adj_return,
+
+    }
 
 def evaluate(test_df, val_df):
     # Metrics DF
@@ -256,22 +281,22 @@ def evaluate(test_df, val_df):
     # One-day ahead
     one_day_metrics = []
     one_day_metrics.append(
-        compute_metrics(
+        get_ML_metrics(
             actuals=val_df["Actuals"], predicted=val_df["Predictions"], verbose=False
         )
     )
     one_day_metrics.append(
-        compute_metrics(
+        get_ML_metrics(
             actuals=val_df["Actuals"], predicted=zero_series_val, verbose=False
         )
     )
     one_day_metrics.append(
-        compute_metrics(
+        get_ML_metrics(
             actuals=test_df["Actuals"], predicted=test_df["Predictions"], verbose=False
         )
     )
     one_day_metrics.append(
-        compute_metrics(
+        get_ML_metrics(
             actuals=test_df["Actuals"], predicted=zero_series_test, verbose=False
         )
     )
@@ -282,10 +307,6 @@ def evaluate(test_df, val_df):
         metrics_df[("One-day ahead", key)] = values.values
 
     # Trading df
-    val_df["Actual Direction"] = np.sign(val_df["Actuals"])
-    val_df["Model Direction"] = np.sign(val_df["Predictions"])
-    test_df["Actual Direction"] = np.sign(test_df["Actuals"])
-    test_df["Model Direction"] = np.sign(test_df["Predictions"])
     index_tuples = [
         ("Validation set", "Model"),
         ("Validation set", "Buy-and-hold"),
@@ -309,16 +330,10 @@ def evaluate(test_df, val_df):
     for key, values in pnl_std.items():
         trading_df[key] = values.values
     accuracies = []
-    accuracies.append(
-        (val_df["Actual Direction"] == val_df["Model Direction"]).astype(int).mean()
-        * 100
-    )
-    accuracies.append((val_df["Actual Direction"] == 1).astype(int).mean() * 100)
-    accuracies.append(
-        (test_df["Actual Direction"] == test_df["Model Direction"]).astype(int).mean()
-        * 100
-    )
-    accuracies.append((test_df["Actual Direction"] == 1).astype(int).mean() * 100)
+    accuracies.append(compute_accuracy(val_df["Predictions"], val_df["Actuals"]))
+    accuracies.append(compute_accuracy(np.ones_like(val_df["Predictions"]), val_df["Actuals"]))
+    accuracies.append(compute_accuracy(test_df["Predictions"], test_df["Actuals"]))
+    accuracies.append(compute_accuracy(np.ones_like(test_df["Predictions"]), test_df["Actuals"]))
     trading_df["Accuracy"] = accuracies
 
     random_df = pd.DataFrame(
@@ -348,7 +363,7 @@ def evaluate(test_df, val_df):
         for _ in range(10000):
             random_choice = np.random.choice([-1, 1], size=len(df))
             pnl, std = backtest(random_choice, df["Actuals"])
-            acc = (df["Actual Direction"] == random_choice).astype(int).mean() * 100
+            acc = (np.sign(df["Actuals"]) == random_choice).astype(int).mean() * 100
             random_pnls.append(pnl)
             random_stds.append(std)
             random_accs.append(acc)

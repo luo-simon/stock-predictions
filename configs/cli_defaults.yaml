@@ -1,7 +1,7 @@
 # lightning.pytorch==2.2.1
 seed_everything: 42
 trainer:
-  max_epochs: 200
+  max_epochs: 500
   log_every_n_steps: 1
   enable_model_summary: False
   enable_progress_bar: True
@@ -17,13 +17,14 @@ trainer:
       init_args:
         save_top_k: 1
         save_last: True
-        monitor: val_loss
-        filename: epoch{epoch:02d}-val_loss{val_loss:.5f}
+        monitor: val_acc
+        mode: max
+        filename: epoch{epoch:02d}-val_acc{val_acc:.5f}
         auto_insert_metric_name: False
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
         monitor: val_loss
-        patience: 500
+        patience: 100
         verbose: False
         mode: min
         min_delta: 0.000001
