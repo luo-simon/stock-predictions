@@ -29,10 +29,13 @@ pd.options.display.float_format = "{:,.8f}".format
 feature_set =  ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
     
 
-def get_ML_metrics(predicted, actuals, verbose=False):
+def get_ML_metrics(predicted: pd.Series, actuals:pd.Series, verbose=False):
     """
     Returns tuple of (r2, mse, rmse, mae, corr)
     """
+    assert isinstance(predicted, pd.Series), "Predicted is not Pandas Series"
+    assert isinstance(actuals, pd.Series), "Actuals is not Pandas Series"
+
     r2 = r2_score(actuals, predicted)
     mse = mean_squared_error(actuals, predicted)
     rmse = np.sqrt(mean_squared_error(actuals, predicted))
@@ -253,100 +256,37 @@ def get_all_metrics(preds, actuals):
 
     }
 
-def evaluate(test_df, val_df):
-    # Metrics DF
-    index_tuples = [
-        ("Validation set", "Model"),
-        ("Validation set", "Naïve"),
-        ("Test set", "Model"),
-        ("Test set", "Naïve"),
-    ]
-    multi_index = pd.MultiIndex.from_tuples(index_tuples, names=["", ""])
-    column_tuples = [
-        ("One-day ahead", "R2"),
-        ("One-day ahead", "MSE"),
-        ("One-day ahead", "RMSE"),
-        ("One-day ahead", "MAE"),
-        ("One-day ahead", "p"),
-        ("One-week ahead", "R2"),
-        ("One-week ahead", "MSE"),
-        ("One-week ahead", "RMSE"),
-        ("One-week ahead", "MAE"),
-        ("One-week ahead", "p"),
-    ]
-    multi_columns = pd.MultiIndex.from_tuples(column_tuples)
-    metrics_df = pd.DataFrame(index=multi_index, columns=multi_columns)
-    zero_series_val = pd.Series(index=val_df.index, data=0)
-    zero_series_test = pd.Series(index=test_df.index, data=0)
-    # One-day ahead
-    one_day_metrics = []
-    one_day_metrics.append(
-        get_ML_metrics(
-            actuals=val_df["Actuals"], predicted=val_df["Predictions"], verbose=False
-        )
-    )
-    one_day_metrics.append(
-        get_ML_metrics(
-            actuals=val_df["Actuals"], predicted=zero_series_val, verbose=False
-        )
-    )
-    one_day_metrics.append(
-        get_ML_metrics(
-            actuals=test_df["Actuals"], predicted=test_df["Predictions"], verbose=False
-        )
-    )
-    one_day_metrics.append(
-        get_ML_metrics(
-            actuals=test_df["Actuals"], predicted=zero_series_test, verbose=False
-        )
-    )
-    one_day_metrics = pd.DataFrame(
-        one_day_metrics, columns=["R2", "MSE", "RMSE", "MAE", "p"]
-    )
-    for key, values in one_day_metrics.items():
-        metrics_df[("One-day ahead", key)] = values.values
+def get_mean_std(stock, column, start="2004-01-01", end="2022-01-01"):
+    df = load_processed_dataset(stock, start, end)[column]
+    return df.mean(), df.std()
 
-    # Trading df
-    index_tuples = [
-        ("Validation set", "Model"),
-        ("Validation set", "Buy-and-hold"),
-        ("Test set", "Model"),
-        ("Test set", "Buy-and-hold"),
-    ]
-    multi_index = pd.MultiIndex.from_tuples(index_tuples)
-    trading_df = pd.DataFrame(
-        index=multi_index, columns=["PnL", "Std of returns", "Accuracy"]
-    )
-    pnl_std = []
-    pnl_std.append(backtest(val_df["Predictions"], val_df["Actuals"]))
-    pnl_std.append(
-        backtest(val_df["Predictions"], val_df["Actuals"], buy_and_hold=True)
-    )
-    pnl_std.append(backtest(test_df["Predictions"], test_df["Actuals"]))
-    pnl_std.append(
-        backtest(test_df["Predictions"], test_df["Actuals"], buy_and_hold=True)
-    )
-    pnl_std = pd.DataFrame(pnl_std, columns=["PnL", "Std of returns"])
-    for key, values in pnl_std.items():
-        trading_df[key] = values.values
+def random_walk(stock, n=1000):
+    df = load_processed_dataset(stock, "2023-01-01", "2024-01-01")
+    actuals = df["log_return_forecast"]
+    
+    dfs = []
+    daily_returns = []
+    return_stds = []
     accuracies = []
-    accuracies.append(compute_accuracy(val_df["Predictions"], val_df["Actuals"]))
-    accuracies.append(compute_accuracy(np.ones_like(val_df["Predictions"]), val_df["Actuals"]))
-    accuracies.append(compute_accuracy(test_df["Predictions"], test_df["Actuals"]))
-    accuracies.append(compute_accuracy(np.ones_like(test_df["Predictions"]), test_df["Actuals"]))
-    trading_df["Accuracy"] = accuracies
+    
+    for i in range(n):
+        mean, std = get_mean_std(stock, "log_return_forecast")
+        random_preds = np.random.normal(loc=mean, scale=std, size=len(actuals))
+        random_preds = pd.Series(random_preds, index=actuals.index)
+        metrics =  get_all_metrics(random_preds, actuals)
+        df = pd.DataFrame(metrics, index=[i])
+        df["Stock"] = stock
+        dfs.append(df)
+    return pd.concat(dfs)
+    mean_pnl = np.array(random_pnls).mean()
+    pnl_std = np.array(random_pnls).std()
+    mean_std = np.array(random_stds).mean()
+    mean_acc = np.array(random_accs).mean()
+    acc_std = np.array(random_accs).std()
+    random_df.append([mean_pnl, pnl_std, mean_std, mean_acc, acc_std])
 
-    random_df = pd.DataFrame(
-        index=["Validation set", "Test set"],
-        columns=[
-            "Mean PnL",
-            "PnL Std.",
-            "Mean Returns Std.",
-            "Mean Accuracy",
-            "Accuracy Std",
-        ],
-    )
-    random_df = []
+
+
 
     fig = plt.figure(figsize=(15, 8))
     grid = plt.GridSpec(3, 2, hspace=0.4, wspace=0.1)
