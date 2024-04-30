@@ -1,0 +1,12 @@
+data.sequence_len: 10
+data.batch_size: 512
+
+model.in_channels: 25
+model.sequence_len: 10
+model.out_channels: 32
+model.kernel_size: 5
+model.hidden_dim: 8
+model.num_layers: 2
+model.weight_decay: 0 
+model.delta: 0.05
+

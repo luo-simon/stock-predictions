@@ -1,5 +1,5 @@
-from audioop import avg
-from sklearn.base import validate_parameter_constraints
+from cgi import test
+from click import progressbar
 import torch
 import optuna
 import argparse
@@ -8,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from src.misc import load_processed_dataset, load_trial_from_experiment, compute_accuracy, load_best_n_trials_from_experiment
+from src.misc import load_processed_dataset, load_trial_from_experiment, compute_accuracy, load_best_n_trials_from_experiment, filter_stdout
 from statsmodels.graphics.tsaplots import plot_acf
 from lightning.pytorch.trainer.trainer import Trainer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -26,8 +26,6 @@ import src.models.statistical.RandomForest as RF
 
 np.random.seed(42)
 pd.options.display.float_format = "{:,.8f}".format
-feature_set =  ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
-    
 
 def get_ML_metrics(predicted: pd.Series, actuals:pd.Series, verbose=False):
     """
@@ -79,14 +77,14 @@ def calculate_future_prices(row, horizon=5):
     return future_prices
 
 
-def predict(trial: optuna.trial.FrozenTrial, best):
+def predict(trial: optuna.trial.FrozenTrial, stock, feature_set):
+    filter_stdout()
+
     "Returns a dataframe with predicted and true values for the model of a given Optuna trial"
-    ckpt = trial.user_attrs["ckpt_path"]
-    if not best:
-        ckpt = trial.user_attrs["last_ckpt_path"]
+    # ckpt = trial.user_attrs["ckpt_path"]
+    ckpt = trial.user_attrs["last_ckpt_path"]
     data_hparams = trial.user_attrs["data_hparams"]
     model_type = trial.user_attrs["model"]
-    stock = data_hparams["stock"]
 
     name_map = {
         "CNN": (CNNModel, CNNDataModule),
@@ -96,129 +94,56 @@ def predict(trial: optuna.trial.FrozenTrial, best):
 
     model = name_map[model_type][0].load_from_checkpoint(ckpt)
     dm = name_map[model_type][1](**data_hparams)
-    trainer = Trainer()
-    if model_type == "LSTM":
-        y = dm.y
-        val_y = (
-            y["2022-01-01":"2023-01-01"]
-            .apply(lambda row: row.tolist(), axis=1)
-            .rename("One-week Actuals")
-        )
-        test_y = (
-            y["2023-01-01":]
-            .apply(lambda row: row.tolist(), axis=1)
-            .rename("One-week Actuals")
-        )
-        val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
-        val_preds = torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
-        val_preds = pd.DataFrame(val_preds, index=val_y.index)
-        val_preds = (
-            val_preds.apply(lambda row: row.tolist(), axis=1)
-            .rename("One-week Predictions")
-            .to_frame()
-        )
-        test_preds = trainer.predict(model, dm)
-        test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
-        test_preds = pd.DataFrame(test_preds, index=test_y.index)
-        test_preds = (
-            test_preds.apply(lambda row: row.tolist(), axis=1)
-            .rename("One-week Predictions")
-            .to_frame()
-        )
+    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
 
-        val_df = val_preds.join(val_y)
-        test_df = test_preds.join(test_y)
-        val_df["Predictions"] = val_df["One-week Predictions"].apply(
-            lambda x: x[0] if x else None
-        )
-        val_df["Actuals"] = val_df["One-week Actuals"].apply(
-            lambda x: x[0] if x else None
-        )
-        test_df["Predictions"] = test_df["One-week Predictions"].apply(
-            lambda x: x[0] if x else None
-        )
-        test_df["Actuals"] = test_df["One-week Actuals"].apply(
-            lambda x: x[0] if x else None
-        )
-        return test_df, val_df
-    elif model_type == "CNN":
-        data = load_processed_dataset(
-            stock, start_date="2022-01-01", end_date="2024-01-01"
-        )
-        validation_set = data[:"2023-01-01"]
-        test_set = data["2023-01-01":]
+    data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
+    validation_set = data[:"2023-01-01"]
+    test_set = data["2023-01-01":]
 
-        val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
-        val_preds = (
-            torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
-        )  # flatten if more than one batch, then squeeze
-        val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
+    val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
+    val_preds = (torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy())  
+    val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
 
-        preds = trainer.predict(model, dm)
-        preds = (
-            torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
-        )  # flatten if more than one batch, then squeeze
-        preds = pd.Series(preds, index=test_set.index, name="Predictions")
-        val_df = validation_set.join(val_preds)
-        val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-        test_df = test_set.join(preds)
-        test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-    elif model_type == "ConvLSTM":
-        data = load_processed_dataset(
-            stock, start_date="2022-01-01", end_date="2024-01-01"
-        )
-        validation_set = data[:"2023-01-01"]
-        test_set = data["2023-01-01":]
+    test_preds = trainer.predict(model, dm)
+    test_preds = (torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy())
+    test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
 
-        val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
-        val_preds = (
-            torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
-        )  # flatten if more than one batch, then squeeze
-        val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
-
-        preds = trainer.predict(model, dm)
-        preds = (
-            torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
-        )  # flatten if more than one batch, then squeeze
-        preds = pd.Series(preds, index=test_set.index, name="Predictions")
-        val_df = validation_set.join(val_preds)
-        val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-        test_df = test_set.join(preds)
-        test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+    val_df = validation_set.join(val_preds)
+    test_df = test_set.join(test_preds)
+    val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+    test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
 
     return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
-
-def mean_dfs(dfs):
-    dfs = pd.concat(dfs)
-    dfs = dfs.groupby(dfs.index).mean()
-    return dfs
-
-def main(experiment_name, trial_num=None, best=True):
+def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
     model_type = experiment_name.split("_")[0]
     stock =  experiment_name.split("_")[1]
 
-    trial = None
-    if model_type != "Linear":
-        if trial_num != None:
-            trial = load_trial_from_experiment(experiment_name, trial_num)
-        else:
-            trial = load_best_n_trials_from_experiment(experiment_name, n=1)[0]
+    if trial_num != None:
+        trial = load_trial_from_experiment(experiment_name, trial_num)
+    else:
+        trial = load_best_n_trials_from_experiment(experiment_name, n=1)[0]
 
+    feature_set = trial.user_attrs.get("feature_set", None)
+    if not feature_set:
+        feature_set = ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
     if model_type == "Linear":
-        val_df, test_df = Linear.predict(stock)
+        val_df, test_df = Linear.predict(stock, feature_set)
     elif model_type == "ARIMA":
-        val_df, test_df = ARIMA.predict(stock, trial.params["p"], trial.params["q"])
-    elif model_type == "RF":
-        val_df, test_df = RF.predict(stock, **trial.params)
-    elif model_type == "CNN":
-        test_df, val_df = predict(trial, best)
-    elif model_type == "LSTM":
-        test_df, val_df = predict(trial, best)
-    elif model_type == "ConvLSTM":
-        test_df, val_df = predict(trial, best)
+        val_df, test_df = ARIMA.predict(stock, feature_set, **trial.params)
+    elif model_type in ["RF", "RandomForest"]:
+        val_df, test_df = RF.predict(stock, feature_set, **trial.params)
+    elif model_type in ["CNN", "LSTM", "ConvLSTM"]:
+        test_df, val_df = predict(trial, stock, feature_set)
     else:
         print("Model type not recognised. Check experiment name is correctly named/typed.")
+    
+    hparams = trial.params
+    return val_df, test_df, hparams
+
+
+def get_results_df(experiment_name, trial_num=None):
+    val_df, test_df, hparams = get_prediction_dfs_from_experiment(experiment_name, trial_num)
         
     val_metrics =  get_all_metrics(val_df["Predictions"], val_df["Actuals"])
     val = pd.DataFrame(val_metrics, index=[experiment_name])
@@ -229,20 +154,102 @@ def main(experiment_name, trial_num=None, best=True):
     test.columns = pd.MultiIndex.from_product([["Test set"], test.columns])
 
     df = pd.concat([val, test], axis=1)
-    if trial:
-        df["Hyperparameters"] = str(trial.params)
+    df["Hyperparameters"] = str(hparams)
 
     return df
+
+def visualise(preds, actuals):
+    # PREDICTIONS PLOT in LOG RETURN (w/ 95% conf. interval)
+    fig, ax = plt.subplots()
+    residuals = actuals - preds
+    interval = 1.96 * residuals.std() # 95% of area under a normal curve lives within ~1.95 std devs.
+    lo = preds - interval
+    hi = preds + interval
+    ax.plot(actuals, label="Actual Log Return")
+    ax.plot(preds, label="Predicted Log Return", color="orange")
+    ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Log Return")
+    ax.set_title("Actual and Predicted Log Return")
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+
+    # PREDICTION PLOT in PRICE
+    fig, ax = plt.subplots()
+    actuals_price = np.exp(actuals.cumsum())
+    preds_price = actuals_price.shift(1, fill_value=1) * np.exp(preds)
+    price_residuals = actuals_price - preds_price
+    lo = preds_price - interval
+    hi = preds_price + interval
+    interval = 1.96 * price_residuals.std() # 95% of area under a normal curve lives within ~1.95 std devs.
+    ax.plot(actuals_price, label="Actual Price")
+    ax.plot(preds_price, label="Predicted Price", color="orange")
+    ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Price")
+    ax.set_title("Actual and Predicted Price")
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+
+    # CORRELATION PLOT
+    fig, ax = plt.subplots()
+    ax.scatter(actuals, preds, label="Predictions", s=0.5)
+    ax.scatter(actuals, np.zeros_like(actuals), label="Naive", s=0.5)
+    ax.plot(
+        [actuals.min(), actuals.max()], [actuals.min(), actuals.max()],
+        "r--",
+        label="Perfect Prediction",
+        linewidth=0.5,
+    )
+    ax.set_xlabel("Actual Values")
+    ax.set_ylabel("Predicted Values")
+    ax.set_title("Correlation Plot of Actual and Predicted Log Return")
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+
+    # RESIDUALS PLOT
+    fig, ax = plt.subplots()
+    ax.plot(residuals, label="Residuals")
+    ax.set_title("Plot of residuals")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Residual")
+    ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+    ax.grid(True, alpha=0.2)
+
+    # RESIDUALS DISTRIBUTION
+    fig, ax = plt.subplots()
+    sns.histplot(residuals, ax=ax, stat="density", kde=True)
+    xmin, xmax = ax.get_xlim()
+    x = np.linspace(xmin, xmax, 100)
+    p = stats.norm.pdf(x, np.mean(residuals), np.std(residuals))
+    ax.plot(x, p, "k", linewidth=2, label="Normal", linestyle="dashed")
+    ax.set_title("Distribution of residuals")
+    ax.set_xlabel("Residuals")
+    ax.set_ylabel("Density")
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+
+    # ACF PLOT OF RESIDUALS
+    fig, ax = plt.subplots()
+    plot_acf(residuals, ax=ax, alpha=0.05, title="ACF Plot of Residuals")
+    ax.set_xlabel("Lag")
+    ax.set_ylabel("ACF")
+    ax.grid(True, alpha=0.2)
+
+    # SHOW PLOTS
+    plt.show()
 
 def get_all_metrics(preds, actuals):
     # Traditional ML metrics
     r2, mse, rmse, mae, corr = get_ML_metrics(predicted=preds, actuals=actuals)
     acc = compute_accuracy(preds, actuals)
+
     # Financial metrics
     avg_daily_return, std = backtest(preds, actuals, verbose=False)
     risk_adj_return = None
     if std != 0:
         risk_adj_return = avg_daily_return/std
+
     return {
         "R2": r2,
         "MSE": mse,
@@ -253,7 +260,6 @@ def get_all_metrics(preds, actuals):
         "Avg. daily return": avg_daily_return,
         "Std. daily return": std,
         "Risk adj. return": risk_adj_return,
-
     }
 
 def get_mean_std(stock, column, start="2004-01-01", end="2022-01-01"):
@@ -263,12 +269,8 @@ def get_mean_std(stock, column, start="2004-01-01", end="2022-01-01"):
 def random_walk(stock, n=1000):
     df = load_processed_dataset(stock, "2023-01-01", "2024-01-01")
     actuals = df["log_return_forecast"]
-    
-    dfs = []
-    daily_returns = []
-    return_stds = []
-    accuracies = []
-    
+    dfs = []    
+
     for i in range(n):
         mean, std = get_mean_std(stock, "log_return_forecast")
         random_preds = np.random.normal(loc=mean, scale=std, size=len(actuals))
@@ -278,16 +280,10 @@ def random_walk(stock, n=1000):
         df["Stock"] = stock
         dfs.append(df)
     return pd.concat(dfs)
-    mean_pnl = np.array(random_pnls).mean()
-    pnl_std = np.array(random_pnls).std()
-    mean_std = np.array(random_stds).mean()
-    mean_acc = np.array(random_accs).mean()
-    acc_std = np.array(random_accs).std()
-    random_df.append([mean_pnl, pnl_std, mean_std, mean_acc, acc_std])
 
 
-
-
+def evaluate(val_df, test_df, stock):
+    random_df = []
     fig = plt.figure(figsize=(15, 8))
     grid = plt.GridSpec(3, 2, hspace=0.4, wspace=0.1)
     val_ax = plt.subplot(grid[0, 0])
@@ -332,9 +328,6 @@ def random_walk(stock, n=1000):
         buy_hold_pnl = trading_df.loc[(titles[i], "Buy-and-hold"), "PnL"]
         axs[i].axvline(x=buy_hold_pnl, color="g", label="Buy-and-hold PnL", linewidth=2)
         axs[i].legend()
-        # kde_line = axs[i].get_lines()[0].get_data()
-        # kde_x, kde_y = kde_line
-        # ci_high = np.percentile(kde_x, 95)
         ci_high = stats.norm.ppf(0.95, np.mean(random_pnls), np.std(random_pnls))
         axs[i].fill_between(x, p, where=(x >= ci_high), color="gray", alpha=0.5)
         axs[i].axvline(ci_high, color="gray", linestyle="--")
@@ -358,9 +351,6 @@ def random_walk(stock, n=1000):
             x=buy_hold_acc, color="g", label="Buy-and-hold Accuracy", linewidth=2
         )
         axs[i + 2].legend()
-        # kde_line = axs[i+2].get_lines()[0].get_data()
-        # kde_x, kde_y = kde_line
-        # ci_high = np.percentile(kde_x, 95)
         ci_high = stats.norm.ppf(0.95, np.mean(random_accs), np.std(random_accs))
         axs[i + 2].fill_between(x, p, where=(x >= ci_high), color="gray", alpha=0.5)
         axs[i + 2].axvline(ci_high, color="gray", linestyle="--")
@@ -376,134 +366,6 @@ def random_walk(stock, n=1000):
             "Accuracy Std",
         ],
     )
-
-    print(metrics_df, "\n")
-    print(trading_df, "\n")
-    print(random_df, "\n")
-
-    # Conversion back into price
-    initial_price = 1
-    test_df["Actual Close Forecast"] = initial_price * np.exp(test_df["Actuals"].cumsum())
-    test_df["Close"] = test_df["Actual Close Forecast"].shift(1, fill_value=initial_price)
-    val_df["Actual Close Forecast"] = initial_price * np.exp(val_df["Actuals"].cumsum())
-    val_df["Close"] = val_df["Actual Close Forecast"].shift(1, fill_value=initial_price)
-
-    # test_df["Predicted Cumsum T+1"] = (
-    #     test_df["Predictions"].rolling(window=2).sum().shift(-1)
-    # )
-    # test_df["Predicted Cumsum T+2"] = (
-    #     test_df["Predictions"].rolling(window=3).sum().shift(-2)
-    # )
-
-    # test_df["Predicted Close T+1"] = test_df["Close"] * np.exp(
-    #     test_df["Predicted Cumsum T+1"]
-    # )
-    # test_df["Predicted Close T+2"] = test_df["Close"] * np.exp(
-    #     test_df["Predicted Cumsum T+2"]
-    # )
-
-    test_df["Predicted Close T+0"] = test_df["Close"] * np.exp(test_df["Predictions"])
-    val_df["Predicted Close T+0"] = val_df["Close"] * np.exp(val_df["Predictions"])
-    
-    # Priec Plots
-    prices_ax = plt.subplot(grid[2, 1])
-    prices_ax.plot(test_df["Actual Close Forecast"], label="Actual Close Forecast", linewidth=0.5)
-    prices_ax.plot(test_df["Predicted Close T+0"], label="Predicted", color="red", linewidth=0.5)
-    prices_ax.plot(test_df["Close"], label="Naive", color="lightgreen", linewidth=0.5)
-    # for index, row in test_df.iterrows():
-    #     prices_ax.plot(
-    #         pd.date_range(start=index, periods=3, freq="B"),
-    #         [row[f"Predicted Close T+{i}"] for i in range(3)],
-    #         alpha=0.5,
-    #     )
-    prices_ax.set_xlabel("Date")
-    prices_ax.set_ylabel("Price")
-    prices_ax.legend()
-    
-    prices_ax = plt.subplot(grid[2, 0])
-    prices_ax.plot(val_df["Actual Close Forecast"], label="Actual Close Forecast", linewidth=0.5)
-    prices_ax.plot(val_df["Predicted Close T+0"], label="Predicted", color="red", linewidth=0.5)
-    prices_ax.plot(val_df["Close"], label="Naive", color="lightgreen", linewidth=0.5)
-    prices_ax.set_xlabel("Date")
-    prices_ax.set_ylabel("Price")
-    prices_ax.legend()
-
-    grid.tight_layout(fig)
-
-    # Residuals
-    fig = plt.figure(figsize=(15, 8))
-    residuals = test_df["Actuals"] - test_df["Predictions"]
-    val_residuals = val_df["Actuals"] - val_df["Predictions"]
-
-    # Prediction Intervals
-    interval = 1.96 * val_residuals.std()
-    test_df["lo"] = test_df["Predictions"] - interval
-    test_df["hi"] = test_df["Predictions"] + interval
-
-    print(test_df.sample(5))
-    grid = plt.GridSpec(2, 3)
-
-    # Actuals and Predicted Time Series
-    preds_ax = plt.subplot(grid[0, 0])
-    preds_ax.plot(test_df.index, test_df["Actuals"], label="Actuals")
-    preds_ax.plot(
-        test_df.index, test_df["Predictions"], label="Predictions", color="orange"
-    )
-    preds_ax.fill_between(
-        test_df.index, test_df["lo"], test_df["hi"], color="orange", alpha=0.2
-    )
-    preds_ax.set_xlabel("Date")
-    preds_ax.set_ylabel("Values")
-    preds_ax.set_title("Actual and Predicted Time Series ")
-    preds_ax.legend()
-    preds_ax.grid(True, alpha=0.2)
-
-    corr_ax = plt.subplot(grid[0, 1])
-    corr_ax.scatter(
-        test_df["Actuals"], test_df["Predictions"], label="Predictions", s=0.5
-    )
-    corr_ax.scatter(test_df["Actuals"], zero_series_test, label="Naive", s=0.5)
-    corr_ax.plot(
-        [test_df["Actuals"].min(), test_df["Actuals"].max()],
-        [test_df["Actuals"].min(), test_df["Actuals"].max()],
-        "r--",
-        label="Perfect Prediction",
-        linewidth=0.5,
-    )
-    corr_ax.set_xlabel("Actual Values")
-    corr_ax.set_ylabel("Predicted Values")
-    corr_ax.set_title("Actual vs Predicted Values")
-    corr_ax.legend()
-
-    timeseries_ax = plt.subplot(grid[1, 0])
-    timeseries_ax.plot(test_df.index, residuals, label="Residuals")
-    timeseries_ax.set_title("Residuals Time Series")
-    timeseries_ax.set_xlabel("Date")
-    timeseries_ax.set_ylabel("Residuals")
-    timeseries_ax.grid(True, alpha=0.2)
-
-    # Histogram with normal distribution fit
-    hist_ax = plt.subplot(grid[1, 1])
-    sns.histplot(residuals, kde=True, ax=hist_ax, stat="density")
-    xmin, xmax = hist_ax.get_xlim()
-    x = np.linspace(xmin, xmax, 100)
-    p = stats.norm.pdf(x, np.mean(residuals), np.std(residuals))
-    hist_ax.plot(x, p, "k", linewidth=2)
-    hist_ax.set_title("Distribution of residuals")
-    hist_ax.set_xlabel("Residuals")
-    hist_ax.set_ylabel("Density")
-
-    # ACF Plot
-    acf_ax = plt.subplot(grid[0, 2])
-    plot_acf(
-        residuals, ax=acf_ax, alpha=0.05, title="ACF Plot of Reisduals", zero=False
-    )
-    acf_ax.set_xlabel("Lag")
-    acf_ax.set_ylabel("ACF")
-    acf_ax.grid(True, alpha=0.2)
-
-    grid.tight_layout(fig)
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -527,4 +389,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args.name, args.trial_num, args.best)
+    df = get_results_df(args.name, args.trial_num)
+    print(df)
+    df.to_clipboard()
+    val_df, test_df, hparams = get_prediction_dfs_from_experiment(args.name, args.trial_num)
+    visualise(test_df["Predictions"], test_df["Actuals"])
+    

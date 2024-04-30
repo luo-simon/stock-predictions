@@ -1,0 +1,8 @@
+experiment_name: ARIMA_HD
+stock: HD
+subcommand: fit
+fit:
+  p: 5
+  q: 5
+tune:
+  n_trials: 10

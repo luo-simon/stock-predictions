@@ -1,0 +1,14 @@
+experiment_name: RF_LHX
+stock: LHX
+# features:
+# - log_return
+subcommand: fit
+fit:
+  n_estimators: 500
+  max_features: 10
+  max_depth: 20
+  min_samples_split: 5
+  min_samples_leaf: 5
+  bootstrap: False
+tune:
+  n_trials: 10

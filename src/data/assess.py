@@ -1,14 +1,12 @@
-import argparse
 import os
 import talib
-from src.misc import load_csv_to_df
+import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
-import scipy.stats as stats
+import matplotlib.pyplot as plt
+from src.misc import load_csv_to_df
 
 """Assess the raw data. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
-
 
 def preprocess(raw_path, processed_path, plot=False):
     for file in os.listdir(raw_path):
@@ -65,9 +63,6 @@ def preprocess(raw_path, processed_path, plot=False):
                 col = df[f"log_return{k}"]
                 sns.histplot(col, kde=False, ax=axs[i], stat="count")
                 axs[i].set_xlabel(f"{v}")
-                # x = np.linspace(min(col), max(col), 100)
-                # p = stats.norm.pdf(x, col.mean(), col.std()-0.003)
-                # axs[i].plot(x, p, 'k', linewidth=1, label=f'Normal distribution', linestyle="--")
             fig.tight_layout()
             plt.show()
 
