@@ -1,5 +1,3 @@
-from cgi import test
-from click import progressbar
 import torch
 import optuna
 import argparse
@@ -8,10 +6,17 @@ import pandas as pd
 import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from src.misc import load_processed_dataset, load_trial_from_experiment, compute_accuracy, load_best_n_trials_from_experiment, filter_stdout
 from statsmodels.graphics.tsaplots import plot_acf
 from lightning.pytorch.trainer.trainer import Trainer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from src.misc import (
+    load_processed_dataset,
+    load_trial_from_experiment,
+    compute_accuracy,
+    load_best_n_trials_from_experiment,
+    filter_stdout,
+)
+
 
 from src.models.CNN.model import CNNModel
 from src.models.CNN.data import CNNDataModule
@@ -27,7 +32,8 @@ import src.models.statistical.RandomForest as RF
 np.random.seed(42)
 pd.options.display.float_format = "{:,.8f}".format
 
-def get_ML_metrics(predicted: pd.Series, actuals:pd.Series, verbose=False):
+
+def get_ML_metrics(predicted: pd.Series, actuals: pd.Series, verbose=False):
     """
     Returns tuple of (r2, mse, rmse, mae, corr)
     """
@@ -52,10 +58,10 @@ def get_ML_metrics(predicted: pd.Series, actuals:pd.Series, verbose=False):
 def backtest(preds_series, actuals_series, verbose=False):
     action = np.where(preds_series <= 0, "hold", "buy")
     returns = np.exp((actuals_series * np.where(action == "hold", 0, 1))) - 1
-    cum_return = (1+returns).cumprod().iloc[-1] - 1
-    avg_daily_return = (cum_return+1)**(1/len(preds_series)) - 1
+    cum_return = (1 + returns).cumprod().iloc[-1] - 1
+    avg_daily_return = (cum_return + 1) ** (1 / len(preds_series)) - 1
     std = returns.std()
-    
+
     if verbose:
         print(
             f"Avg. Daily Return: {avg_daily_return}. Cumulative return: {cum_return}. Standard deviation: {std}"
@@ -101,11 +107,11 @@ def predict(trial: optuna.trial.FrozenTrial, stock, feature_set):
     test_set = data["2023-01-01":]
 
     val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
-    val_preds = (torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy())  
+    val_preds = torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
     val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
 
     test_preds = trainer.predict(model, dm)
-    test_preds = (torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy())
+    test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
     test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
 
     val_df = validation_set.join(val_preds)
@@ -133,25 +139,56 @@ def permutation_importance(model_type, stock):
     model = name_map[model_type][0].load_from_checkpoint(ckpt)
     dm = name_map[model_type][1](**data_hparams)
     trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
-    
-    y_test = load_processed_dataset(stock, start_date="2023-01-01", end_date="2024-01-01")["log_return_forecast"]
+
+    y_test = load_processed_dataset(
+        stock, start_date="2023-01-01", end_date="2024-01-01"
+    )["log_return_forecast"]
     y_test = y_test.rename("Actuals")
 
-    features = ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
-     
+    features = [
+        "log_return",
+        "log_return_open",
+        "log_return_high",
+        "log_return_low",
+        "log_return_volume",
+        "sma",
+        "wma",
+        "ema",
+        "dema",
+        "tema",
+        "aroon",
+        "rsi",
+        "willr",
+        "cci",
+        "ad",
+        "mom",
+        "slowk",
+        "slowd",
+        "macd",
+        "fed_funds_rate",
+        "^N225",
+        "^IXIC",
+        "^FTSE",
+        "^SPX",
+        "^DJI",
+    ]
+
     df = []
     for i, f in enumerate(features):
         test_dataloader = dm.get_permuted_test_set(i)
         preds = trainer.predict(model, dataloaders=[test_dataloader])
-        preds = (torch.cat(preds, dim=0).squeeze().cpu().detach().numpy())
+        preds = torch.cat(preds, dim=0).squeeze().cpu().detach().numpy()
         preds = pd.Series(preds, index=y_test.index, name="Predictions")
-        metrics =  get_all_metrics(preds, y_test)
+        metrics = get_all_metrics(preds, y_test)
         df.append(metrics)
-    df = pd.DataFrame(df, index=features)[["RMSE", "Accuracy", "Avg. daily return", "Risk adj. return"]]
-    baseline = get_results_df(experiment_name)["Test set"].iloc[0][["RMSE", "Accuracy", "Avg. daily return", "Risk adj. return"]]
-    return df-baseline
+    df = pd.DataFrame(df, index=features)[
+        ["RMSE", "Accuracy", "Avg. daily return", "Risk adj. return"]
+    ]
+    baseline = get_results_df(experiment_name)["Test set"].iloc[0][
+        ["RMSE", "Accuracy", "Avg. daily return", "Risk adj. return"]
+    ]
+    return df - baseline
 
-    
 
 def predict_permute_feature(trial: optuna.trial.FrozenTrial, feature_to_permute):
     ckpt = trial.user_attrs["last_ckpt_path"]
@@ -168,10 +205,12 @@ def predict_permute_feature(trial: optuna.trial.FrozenTrial, feature_to_permute)
     dm = name_map[model_type][1](**data_hparams)
     trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
 
-    test_set = load_processed_dataset(stock, start_date="2023-01-01", end_date="2024-01-01")
+    test_set = load_processed_dataset(
+        stock, start_date="2023-01-01", end_date="2024-01-01"
+    )
 
     test_preds = trainer.predict(model, dm)
-    test_preds = (torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy())
+    test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
     test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
 
     test_df = test_set.join(test_preds)
@@ -180,9 +219,10 @@ def predict_permute_feature(trial: optuna.trial.FrozenTrial, feature_to_permute)
 
     return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
+
 def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
     model_type = experiment_name.split("_")[0]
-    stock =  experiment_name.split("_")[1]
+    stock = experiment_name.split("_")[1]
 
     if trial_num != None:
         trial = load_trial_from_experiment(experiment_name, trial_num)
@@ -191,7 +231,33 @@ def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
 
     feature_set = trial.user_attrs.get("feature_set", None)
     if not feature_set:
-        feature_set = ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
+        feature_set = [
+            "log_return",
+            "log_return_open",
+            "log_return_high",
+            "log_return_low",
+            "log_return_volume",
+            "sma",
+            "wma",
+            "ema",
+            "dema",
+            "tema",
+            "aroon",
+            "rsi",
+            "willr",
+            "cci",
+            "ad",
+            "mom",
+            "slowk",
+            "slowd",
+            "macd",
+            "fed_funds_rate",
+            "^N225",
+            "^IXIC",
+            "^FTSE",
+            "^SPX",
+            "^DJI",
+        ]
     if model_type == "Linear":
         val_df, test_df = Linear.predict(stock, feature_set)
     elif model_type == "ARIMA":
@@ -201,19 +267,24 @@ def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
     elif model_type in ["CNN", "LSTM", "ConvLSTM"]:
         test_df, val_df = predict(trial, stock, feature_set)
     else:
-        print("Model type not recognised. Check experiment name is correctly named/typed.")
-    
+        print(
+            "Model type not recognised. Check experiment name is correctly named/typed."
+        )
+
     hparams = trial.params
     return val_df, test_df, hparams
 
+
 def get_results_df(experiment_name, trial_num=None):
-    val_df, test_df, hparams = get_prediction_dfs_from_experiment(experiment_name, trial_num)
-        
-    val_metrics =  get_all_metrics(val_df["Predictions"], val_df["Actuals"])
+    val_df, test_df, hparams = get_prediction_dfs_from_experiment(
+        experiment_name, trial_num
+    )
+
+    val_metrics = get_all_metrics(val_df["Predictions"], val_df["Actuals"])
     val = pd.DataFrame(val_metrics, index=[experiment_name])
     val.columns = pd.MultiIndex.from_product([["Validation set"], val.columns])
 
-    test_metrics =  get_all_metrics(test_df["Predictions"], test_df["Actuals"])
+    test_metrics = get_all_metrics(test_df["Predictions"], test_df["Actuals"])
     test = pd.DataFrame(test_metrics, index=[experiment_name])
     test.columns = pd.MultiIndex.from_product([["Test set"], test.columns])
 
@@ -222,11 +293,14 @@ def get_results_df(experiment_name, trial_num=None):
 
     return df
 
+
 def visualise(preds, actuals):
     # PREDICTIONS PLOT in LOG RETURN (w/ 95% conf. interval)
     fig, ax = plt.subplots()
     residuals = actuals - preds
-    interval = 1.96 * residuals.std() # 95% of area under a normal curve lives within ~1.95 std devs.
+    interval = (
+        1.96 * residuals.std()
+    )  # 95% of area under a normal curve lives within ~1.95 std devs.
     lo = preds - interval
     hi = preds + interval
     ax.plot(actuals, label="Actual Log Return")
@@ -245,7 +319,9 @@ def visualise(preds, actuals):
     price_residuals = actuals_price - preds_price
     lo = preds_price - interval
     hi = preds_price + interval
-    interval = 1.96 * price_residuals.std() # 95% of area under a normal curve lives within ~1.95 std devs.
+    interval = (
+        1.96 * price_residuals.std()
+    )  # 95% of area under a normal curve lives within ~1.95 std devs.
     ax.plot(actuals_price, label="Actual Price")
     ax.plot(preds_price, label="Predicted Price", color="orange")
     ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
@@ -260,7 +336,8 @@ def visualise(preds, actuals):
     ax.scatter(actuals, preds, label="Predictions", s=0.5)
     ax.scatter(actuals, np.zeros_like(actuals), label="Naive", s=0.5)
     ax.plot(
-        [actuals.min(), actuals.max()], [actuals.min(), actuals.max()],
+        [actuals.min(), actuals.max()],
+        [actuals.min(), actuals.max()],
         "r--",
         label="Perfect Prediction",
         linewidth=0.5,
@@ -277,7 +354,7 @@ def visualise(preds, actuals):
     ax.set_title("Plot of residuals")
     ax.set_xlabel("Date")
     ax.set_ylabel("Residual")
-    ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+    ax.axhline(y=0, color="gray", linestyle="--", linewidth=0.8)
     ax.grid(True, alpha=0.2)
 
     # RESIDUALS DISTRIBUTION
@@ -303,6 +380,7 @@ def visualise(preds, actuals):
     # SHOW PLOTS
     plt.show()
 
+
 def get_all_metrics(preds, actuals):
     # Traditional ML metrics
     r2, mse, rmse, mae, corr = get_ML_metrics(predicted=preds, actuals=actuals)
@@ -312,7 +390,7 @@ def get_all_metrics(preds, actuals):
     avg_daily_return, std = backtest(preds, actuals, verbose=False)
     risk_adj_return = None
     if std != 0:
-        risk_adj_return = avg_daily_return/std
+        risk_adj_return = avg_daily_return / std
 
     return {
         "R2": r2,
@@ -326,24 +404,27 @@ def get_all_metrics(preds, actuals):
         "Risk adj. return": risk_adj_return,
     }
 
+
 def get_mean_std(stock, column, start="2004-01-01", end="2022-01-01"):
     df = load_processed_dataset(stock, start, end)[column]
     return df.mean(), df.std()
 
+
 def random_walk(stock, n=1000):
     df = load_processed_dataset(stock, "2023-01-01", "2024-01-01")
     actuals = df["log_return_forecast"]
-    dfs = []    
+    dfs = []
 
     for i in range(n):
         mean, std = get_mean_std(stock, "log_return_forecast")
         random_preds = np.random.normal(loc=mean, scale=std, size=len(actuals))
         random_preds = pd.Series(random_preds, index=actuals.index)
-        metrics =  get_all_metrics(random_preds, actuals)
+        metrics = get_all_metrics(random_preds, actuals)
         df = pd.DataFrame(metrics, index=[i])
         df["Stock"] = stock
         dfs.append(df)
     return pd.concat(dfs)
+
 
 def evaluate(val_df, test_df, stock):
     random_df = []
@@ -430,6 +511,7 @@ def evaluate(val_df, test_df, stock):
         ],
     )
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Evaluate the best model of a given experiment"
@@ -454,6 +536,7 @@ if __name__ == "__main__":
     df = get_results_df(args.name, args.trial_num)
     print(df)
     df.to_clipboard()
-    val_df, test_df, hparams = get_prediction_dfs_from_experiment(args.name, args.trial_num)
+    val_df, test_df, hparams = get_prediction_dfs_from_experiment(
+        args.name, args.trial_num
+    )
     visualise(test_df["Predictions"], test_df["Actuals"])
-    

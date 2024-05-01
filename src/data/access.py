@@ -1,5 +1,3 @@
-"""Ingests the data without dealing with missing values, or outliers."""
-
 import argparse
 import os.path
 import yfinance as yf

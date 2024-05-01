@@ -102,7 +102,7 @@ def load_trial_from_experiment(experiment_name, trial_num=None):
     print(f"Sampled parameters were {params_str}")
     user_attrs_str = "".join(f"\n\t- {k}: {v}" for k, v in trial.user_attrs.items())
     print(f"User attributes: {user_attrs_str}")
-    
+
     return trial
 
 
@@ -121,14 +121,18 @@ def load_best_n_trials_from_experiment(experiment_name, n=5):
     unique_trials = sorted(unique_trials, key=lambda x: x.value, reverse=True)[:n]
 
     for i, trial in enumerate(unique_trials, 1):
-        print(f"Rank {i}: trial no. {trial.number}, value: {trial.value}. Run completed at {trial.datetime_complete}")
+        print(
+            f"Rank {i}: trial no. {trial.number}, value: {trial.value}. Run completed at {trial.datetime_complete}"
+        )
 
     return unique_trials
+
 
 def compute_accuracy(preds, actuals):
     actual_dir = np.sign(actuals)
     preds_dir = np.sign(preds)
-    return (actual_dir == preds_dir).mean() * 100.
+    return (actual_dir == preds_dir).mean() * 100.0
+
 
 def get_study(experiment_name, direction="maximize"):
     study = optuna.create_study(
@@ -136,7 +140,7 @@ def get_study(experiment_name, direction="maximize"):
         storage="sqlite:///optuna_studies.db",
         direction=direction,
         load_if_exists=True,
-        sampler=optuna.samplers.TPESampler(), 
+        sampler=optuna.samplers.TPESampler(),
         pruner=optuna.pruners.NopPruner(),
     )
     return study

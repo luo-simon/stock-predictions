@@ -6,7 +6,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from src.misc import load_csv_to_df
 
-"""Assess the raw data. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data. Ensure that date formats are correct and correctly timezoned."""
 
 def preprocess(raw_path, processed_path, plot=False):
     for file in os.listdir(raw_path):
