@@ -115,6 +115,71 @@ def predict(trial: optuna.trial.FrozenTrial, stock, feature_set):
 
     return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
 
+
+def permutation_importance(model_type, stock):
+    filter_stdout()
+    experiment_name = f"{model_type}_{stock}"
+    trial = load_best_n_trials_from_experiment(experiment_name, n=1)[0]
+    ckpt = trial.user_attrs["last_ckpt_path"]
+    data_hparams = trial.user_attrs["data_hparams"]
+    model_type = trial.user_attrs["model"]
+
+    name_map = {
+        "CNN": (CNNModel, CNNDataModule),
+        "LSTM": (LSTMModel, LSTMDataModule),
+        "ConvLSTM": (ConvLSTMModel, ConvLSTMDataModule),
+    }
+
+    model = name_map[model_type][0].load_from_checkpoint(ckpt)
+    dm = name_map[model_type][1](**data_hparams)
+    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
+    
+    y_test = load_processed_dataset(stock, start_date="2023-01-01", end_date="2024-01-01")["log_return_forecast"]
+    y_test = y_test.rename("Actuals")
+
+    features = ['log_return', 'log_return_open', 'log_return_high', 'log_return_low','log_return_volume', 'sma', 'wma', 'ema', 'dema','tema', 'aroon', 'rsi', 'willr', 'cci', 'ad', 'mom', 'slowk', 'slowd', 'macd', 'fed_funds_rate', '^N225', '^IXIC', '^FTSE', '^SPX', '^DJI']
+     
+    df = []
+    for i, f in enumerate(features):
+        test_dataloader = dm.get_permuted_test_set(i)
+        preds = trainer.predict(model, dataloaders=[test_dataloader])
+        preds = (torch.cat(preds, dim=0).squeeze().cpu().detach().numpy())
+        preds = pd.Series(preds, index=y_test.index, name="Predictions")
+        metrics =  get_all_metrics(preds, y_test)
+        df.append(metrics)
+    df = pd.DataFrame(df, index=features)[["RMSE", "Accuracy", "Avg. daily return", "Risk adj. return"]]
+    baseline = get_results_df(experiment_name)["Test set"].iloc[0][["RMSE", "Accuracy", "Avg. daily return", "Risk adj. return"]]
+    return df-baseline
+
+    
+
+def predict_permute_feature(trial: optuna.trial.FrozenTrial, feature_to_permute):
+    ckpt = trial.user_attrs["last_ckpt_path"]
+    data_hparams = trial.user_attrs["data_hparams"]
+    model_type = trial.user_attrs["model"]
+
+    name_map = {
+        "CNN": (CNNModel, CNNDataModule),
+        "LSTM": (LSTMModel, LSTMDataModule),
+        "ConvLSTM": (ConvLSTMModel, ConvLSTMDataModule),
+    }
+
+    model = name_map[model_type][0].load_from_checkpoint(ckpt)
+    dm = name_map[model_type][1](**data_hparams)
+    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
+
+    test_set = load_processed_dataset(stock, start_date="2023-01-01", end_date="2024-01-01")
+
+    test_preds = trainer.predict(model, dm)
+    test_preds = (torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy())
+    test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
+
+    test_df = test_set.join(test_preds)
+    val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+    test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
+
+    return test_df[["Predictions", "Actuals"]], val_df[["Predictions", "Actuals"]]
+
 def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
     model_type = experiment_name.split("_")[0]
     stock =  experiment_name.split("_")[1]
@@ -140,7 +205,6 @@ def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
     
     hparams = trial.params
     return val_df, test_df, hparams
-
 
 def get_results_df(experiment_name, trial_num=None):
     val_df, test_df, hparams = get_prediction_dfs_from_experiment(experiment_name, trial_num)
@@ -281,7 +345,6 @@ def random_walk(stock, n=1000):
         dfs.append(df)
     return pd.concat(dfs)
 
-
 def evaluate(val_df, test_df, stock):
     random_df = []
     fig = plt.figure(figsize=(15, 8))
@@ -366,7 +429,6 @@ def evaluate(val_df, test_df, stock):
             "Accuracy Std",
         ],
     )
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
