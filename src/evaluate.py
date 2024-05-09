@@ -7,6 +7,7 @@ import seaborn as sns
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.stats.stattools import durbin_watson
 from lightning.pytorch.trainer.trainer import Trainer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from src.misc import (
@@ -295,6 +296,8 @@ def get_results_df(experiment_name, trial_num=None):
 
 
 def visualise(preds, actuals):
+    plt.rcParams.update({'font.size': 16}) 
+
     # PREDICTIONS PLOT in LOG RETURN (w/ 95% conf. interval)
     fig, ax = plt.subplots()
     residuals = actuals - preds
@@ -309,8 +312,10 @@ def visualise(preds, actuals):
     ax.set_xlabel("Date")
     ax.set_ylabel("Log Return")
     ax.set_title("Actual and Predicted Log Return")
+    ax.xaxis.set_tick_params(rotation=45)
     ax.legend()
     ax.grid(True, alpha=0.2)
+    fig.tight_layout()
 
     # PREDICTION PLOT in PRICE
     fig, ax = plt.subplots()
@@ -328,8 +333,10 @@ def visualise(preds, actuals):
     ax.set_xlabel("Date")
     ax.set_ylabel("Price")
     ax.set_title("Actual and Predicted Price")
+    ax.xaxis.set_tick_params(rotation=45)
     ax.legend()
     ax.grid(True, alpha=0.2)
+    fig.tight_layout()
 
     # CORRELATION PLOT
     fig, ax = plt.subplots()
@@ -344,9 +351,10 @@ def visualise(preds, actuals):
     )
     ax.set_xlabel("Actual Values")
     ax.set_ylabel("Predicted Values")
-    ax.set_title("Correlation Plot of Actual and Predicted Log Return")
+    ax.set_title("Correlation Plot")
     ax.legend()
     ax.grid(True, alpha=0.2)
+    fig.tight_layout()
 
     # RESIDUALS PLOT
     fig, ax = plt.subplots()
@@ -356,6 +364,8 @@ def visualise(preds, actuals):
     ax.set_ylabel("Residual")
     ax.axhline(y=0, color="gray", linestyle="--", linewidth=0.8)
     ax.grid(True, alpha=0.2)
+    ax.xaxis.set_tick_params(rotation=45)
+    fig.tight_layout()
 
     # RESIDUALS DISTRIBUTION
     fig, ax = plt.subplots()
@@ -369,6 +379,7 @@ def visualise(preds, actuals):
     ax.set_ylabel("Density")
     ax.legend()
     ax.grid(True, alpha=0.2)
+    fig.tight_layout()
 
     # ACF PLOT OF RESIDUALS
     fig, ax = plt.subplots()
@@ -376,7 +387,39 @@ def visualise(preds, actuals):
     ax.set_xlabel("Lag")
     ax.set_ylabel("ACF")
     ax.grid(True, alpha=0.2)
+    fig.tight_layout()
 
+    # QQ PLOT
+    sorted_data = np.sort(residuals)
+    theoretical_quantiles = stats.norm.ppf((np.arange(1, len(sorted_data) + 1) - 0.5) / len(sorted_data))
+    res = stats.linregress(theoretical_quantiles, sorted_data)
+    fig, ax = plt.subplots()
+    ax.plot(theoretical_quantiles, sorted_data, 'o', label="Residuals", markersize=2)
+    ax.plot(theoretical_quantiles, res.slope * theoretical_quantiles + res.intercept, 'r-', label="Fit Line")
+    z = stats.norm.ppf(0.975)
+    se = res.slope * np.sqrt(1 / len(sorted_data) + (theoretical_quantiles - np.mean(theoretical_quantiles))**2 / np.sum((theoretical_quantiles - np.mean(theoretical_quantiles))**2))
+    ci = z * se
+    ax.fill_between(theoretical_quantiles, res.slope * theoretical_quantiles + res.intercept - ci, res.slope * theoretical_quantiles + res.intercept + ci, color='lightgrey', alpha=0.5, label=f'95% CI')
+    ax.set_xlabel('Normal theoretical quantiles')
+    ax.set_ylabel('Residuals quantiles')
+    ax.set_title('Q-Q plot of residuals')
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+    fig.tight_layout()
+
+    # TEST ZERO MEAN
+    print(f"Residuals mean: {residuals.mean()}")
+    t_stat, p_value = stats.ttest_1samp(residuals, popmean=0)
+    print(f"Zero-mean: one-sample t-test: t={t_stat}, p-value={p_value}")
+
+    # TEST NORMALITY (Shapiro-Wilk test)
+    stat, p = stats.shapiro(residuals)
+    print(f"Normality: Shapiro-Wilk Test: Statistics={stat}, p-value={p}") 
+
+    # TEST AUTOCORRELATION (Durbin-Watson test)
+    dw_stat = durbin_watson(residuals)
+    print(f"Autocorrelation: Durbin-Watson statistic: {dw_stat}")
+    
     # SHOW PLOTS
     plt.show()
 
