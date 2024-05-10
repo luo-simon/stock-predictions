@@ -30,7 +30,7 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
 ```
 
 
-## sage
+## Usage
 
 First, ensure data is downloaded and processed by running `accses` and `assess`.
 ```
