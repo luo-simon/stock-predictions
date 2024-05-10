@@ -144,3 +144,10 @@ def get_study(experiment_name, direction="maximize"):
         pruner=optuna.pruners.NopPruner(),
     )
     return study
+
+
+def compare_series(s1, s2):
+    assert len(s1) == len(s2), f"Length not same: {len(s1)}, {len(s2)}"
+    diffs = ~np.isclose(s1, s2, atol=1e-4, rtol=0) & ~(pd.isna(s1) & pd.isna(s2))
+    diff_df = pd.DataFrame({"s1": s1, "s2": s2, "diff": diffs})
+    assert not diffs.any(), diff_df[diffs]

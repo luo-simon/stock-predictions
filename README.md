@@ -1,5 +1,44 @@
 # Comparative Analysis of Machine-Learning Methods to Predict Stock Price
 
+## Repository overview
+File structure adapted from *https://drivendata.github.io/cookiecutter-data-science/*
+```
+├── LICENSE
+├── README.md          
+├── data
+│   ├── external       <- Data from third party sources.
+│   ├── processed      <- The final, canonical data sets for modeling.
+│   └── raw            <- The original, immutable data dump.
+├── configs            <- Model configuration files
+├── notebooks          <- Jupyter notebooks 
+└── src                <- Source code for use in this project.
+    ├── data           
+    │   ├── access.py  <- Get data 
+    │   └── assess.py  <- Process data and feature engineering
+    ├── models         <- Folder for each model   
+    │   └── example_model 
+    │       ├── data.py     <- Preprocess data to suit input to model
+    │       ├── evaluate.py <- Evaluate model on test set
+    │       ├── model.py    <- Define model
+    │       ├── train.py    <- Train model>
+    │       └── tune.py     <- Tune model hyperparameters
+    │   ...
+    ├── tests          <- Tests, mirroring models structure
+    ├── trading        <- Simulating trading strategies based on model predictions
+    └── visualization  <- Scripts to create exploratory and results oriented visualizations
+```
+## Libraries
+- Data
+    - `yfinance` to interface with Yahoo Finance datasets
+    - `ta-lib` to generate technical indicators
+- Machine-Learning
+    - `sklearn`, `pytorch`, `statsmodels`
+    - `mlflow` for logging model experiments
+- Misc
+    - `numpy`, `pandas`, `matplotlib`, `seaborn`, `yaml`
+- Formatting/Linting
+    - `black`, `flake8`
+    
 An experiment can be run from the command line in the following format:
 
 ```

@@ -296,7 +296,7 @@ def get_results_df(experiment_name, trial_num=None):
 
 
 def visualise(preds, actuals):
-    plt.rcParams.update({'font.size': 16}) 
+    plt.rcParams.update({"font.size": 16})
 
     # PREDICTIONS PLOT in LOG RETURN (w/ 95% conf. interval)
     fig, ax = plt.subplots()
@@ -391,18 +391,36 @@ def visualise(preds, actuals):
 
     # QQ PLOT
     sorted_data = np.sort(residuals)
-    theoretical_quantiles = stats.norm.ppf((np.arange(1, len(sorted_data) + 1) - 0.5) / len(sorted_data))
+    theoretical_quantiles = stats.norm.ppf(
+        (np.arange(1, len(sorted_data) + 1) - 0.5) / len(sorted_data)
+    )
     res = stats.linregress(theoretical_quantiles, sorted_data)
     fig, ax = plt.subplots()
-    ax.plot(theoretical_quantiles, sorted_data, 'o', label="Residuals", markersize=2)
-    ax.plot(theoretical_quantiles, res.slope * theoretical_quantiles + res.intercept, 'r-', label="Fit Line")
+    ax.plot(theoretical_quantiles, sorted_data, "o", label="Residuals", markersize=2)
+    ax.plot(
+        theoretical_quantiles,
+        res.slope * theoretical_quantiles + res.intercept,
+        "r-",
+        label="Fit Line",
+    )
     z = stats.norm.ppf(0.975)
-    se = res.slope * np.sqrt(1 / len(sorted_data) + (theoretical_quantiles - np.mean(theoretical_quantiles))**2 / np.sum((theoretical_quantiles - np.mean(theoretical_quantiles))**2))
+    se = res.slope * np.sqrt(
+        1 / len(sorted_data)
+        + (theoretical_quantiles - np.mean(theoretical_quantiles)) ** 2
+        / np.sum((theoretical_quantiles - np.mean(theoretical_quantiles)) ** 2)
+    )
     ci = z * se
-    ax.fill_between(theoretical_quantiles, res.slope * theoretical_quantiles + res.intercept - ci, res.slope * theoretical_quantiles + res.intercept + ci, color='lightgrey', alpha=0.5, label=f'95% CI')
-    ax.set_xlabel('Normal theoretical quantiles')
-    ax.set_ylabel('Residuals quantiles')
-    ax.set_title('Q-Q plot of residuals')
+    ax.fill_between(
+        theoretical_quantiles,
+        res.slope * theoretical_quantiles + res.intercept - ci,
+        res.slope * theoretical_quantiles + res.intercept + ci,
+        color="lightgrey",
+        alpha=0.5,
+        label=f"95% CI",
+    )
+    ax.set_xlabel("Normal theoretical quantiles")
+    ax.set_ylabel("Residuals quantiles")
+    ax.set_title("Q-Q plot of residuals")
     ax.legend()
     ax.grid(True, alpha=0.2)
     fig.tight_layout()
@@ -414,12 +432,12 @@ def visualise(preds, actuals):
 
     # TEST NORMALITY (Shapiro-Wilk test)
     stat, p = stats.shapiro(residuals)
-    print(f"Normality: Shapiro-Wilk Test: Statistics={stat}, p-value={p}") 
+    print(f"Normality: Shapiro-Wilk Test: Statistics={stat}, p-value={p}")
 
     # TEST AUTOCORRELATION (Durbin-Watson test)
     dw_stat = durbin_watson(residuals)
     print(f"Autocorrelation: Durbin-Watson statistic: {dw_stat}")
-    
+
     # SHOW PLOTS
     plt.show()
 
