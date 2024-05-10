@@ -40,7 +40,9 @@ def preprocess(raw_path, processed_path, plot=False):
         if plot:
             fig, axs = plt.subplots(1, 5, figsize=(20, 3), sharey=True)
             for i, (k, v) in enumerate(suffixes.items()):
-                sns.histplot(df[f"log_return{k}"], kde=False, ax=axs[i], stat="count")
+                sns.histplot(
+                    df[f"log_return{k}"], kde=False, ax=axs[i], stat="count"
+                )
                 # axs[i].set_title(f'Distribution of {v}')
                 axs[i].set_xlabel(f"{v}")
                 axs[i].legend()
@@ -92,9 +94,15 @@ def add_technical_indicators(df):
     df["tema"] = np.where(df["Close"] > tema, 1, -1)
 
     # Other technical indicators
-    aroon_down, aroon_up = talib.AROON(df["High"], df["Low"], timeperiod=14)  # Aroon
-    rsi = talib.RSI(df["Close"], timeperiod=14)  # Relative Strength Index (RSI)
-    willr = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=14)  # Williams R
+    aroon_down, aroon_up = talib.AROON(
+        df["High"], df["Low"], timeperiod=14
+    )  # Aroon
+    rsi = talib.RSI(
+        df["Close"], timeperiod=14
+    )  # Relative Strength Index (RSI)
+    willr = talib.WILLR(
+        df["High"], df["Low"], df["Close"], timeperiod=14
+    )  # Williams R
     cci = talib.CCI(df["High"], df["Low"], df["Close"], timeperiod=14)  # CCI
     ad = talib.AD(
         df["High"], df["Low"], df["Close"], df["Volume"]
@@ -157,9 +165,9 @@ def generate_features(df):
     df = add_technical_indicators(df)
 
     # Macroeconomic Indicator (FFR)
-    fed_funds = load_csv_to_df("data/external/FEDFUNDS.csv")["FEDFUNDS"].rename(
-        "fed_funds_rate"
-    )
+    fed_funds = load_csv_to_df("data/external/FEDFUNDS.csv")[
+        "FEDFUNDS"
+    ].rename("fed_funds_rate")
     fed_funds = fed_funds.reindex(df.index, method="ffill")
     df = df.join(fed_funds, how="left")
 
@@ -172,7 +180,9 @@ def generate_features(df):
             index_series = load_csv_to_df(os.path.abspath(file_path))["Close"]
             index_series = index_series.rename(col_name)
             index_series = index_series.reindex(df.index, method="ffill")
-            index_series = np.log(index_series / index_series.shift(1))  # Log return
+            index_series = np.log(
+                index_series / index_series.shift(1)
+            )  # Log return
             df = df.join(index_series, how="left").dropna()
 
     return df
@@ -180,9 +190,14 @@ def generate_features(df):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocess dataset")
-    parser.add_argument("-r", "--raw-path", help="Raw data path", default="data/raw")
     parser.add_argument(
-        "-p", "--processed-path", help="Processed data path", default="data/processed"
+        "-r", "--raw-path", help="Raw data path", default="data/raw"
+    )
+    parser.add_argument(
+        "-p",
+        "--processed-path",
+        help="Processed data path",
+        default="data/processed",
     )
     args = parser.parse_args()
 

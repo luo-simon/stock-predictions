@@ -14,7 +14,9 @@ def load_csv_to_df(path):
     return df
 
 
-def load_processed_dataset(ticker, start_date="2018-01-01", end_date="2023-01-01"):
+def load_processed_dataset(
+    ticker, start_date="2018-01-01", end_date="2023-01-01"
+):
     df = load_csv_to_df(
         f"/Users/simon/Documents/II/Dissertation/data/processed/{ticker.upper()}.csv"
     )
@@ -100,7 +102,9 @@ def load_trial_from_experiment(experiment_name, trial_num=None):
 
     params_str = "".join(f"\n\t- {k}: {v}" for k, v in trial.params.items())
     print(f"Sampled parameters were {params_str}")
-    user_attrs_str = "".join(f"\n\t- {k}: {v}" for k, v in trial.user_attrs.items())
+    user_attrs_str = "".join(
+        f"\n\t- {k}: {v}" for k, v in trial.user_attrs.items()
+    )
     print(f"User attributes: {user_attrs_str}")
 
     return trial
@@ -118,7 +122,9 @@ def load_best_n_trials_from_experiment(experiment_name, n=5):
         if trial.value and trial.value not in seen:
             seen.add(trial.value)
             unique_trials.append(trial)
-    unique_trials = sorted(unique_trials, key=lambda x: x.value, reverse=True)[:n]
+    unique_trials = sorted(unique_trials, key=lambda x: x.value, reverse=True)[
+        :n
+    ]
 
     for i, trial in enumerate(unique_trials, 1):
         print(
@@ -148,6 +154,8 @@ def get_study(experiment_name, direction="maximize"):
 
 def compare_series(s1, s2):
     assert len(s1) == len(s2), f"Length not same: {len(s1)}, {len(s2)}"
-    diffs = ~np.isclose(s1, s2, atol=1e-4, rtol=0) & ~(pd.isna(s1) & pd.isna(s2))
+    diffs = ~np.isclose(s1, s2, atol=1e-4, rtol=0) & ~(
+        pd.isna(s1) & pd.isna(s2)
+    )
     diff_df = pd.DataFrame({"s1": s1, "s2": s2, "diff": diffs})
     assert not diffs.any(), diff_df[diffs]

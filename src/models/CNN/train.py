@@ -1,37 +1,47 @@
 import optuna
-from src.models.custom_classes import TuneTrainer,  BaseCLI
+from src.models.custom_classes import TuneTrainer, BaseCLI
 from src.misc import filter_stdout, get_study
 
 from src.models.CNN.model import CNNModel
 from src.models.CNN.data import CNNDataModule
-    
+
+
 class CNNCLI(BaseCLI):
     def add_arguments_to_parser(self, parser):
         super().add_arguments_to_parser(parser)
         parser.link_arguments("data.sequence_len", "model.sequence_len")
 
     def fit(self, model, datamodule, ckpt_path):
-        study = get_study(experiment_name=self.config.fit.experiment_name)# Enter default fit values here
-        study.enqueue_trial({
-            "sequence_len": 10,
-            "batch_size": 512,
-            "kernel_size": 5,
-            "out_channels": 32,
-            "weight_decay": 0,
-            "delta":0.05,
-        })
+        study = get_study(
+            experiment_name=self.config.fit.experiment_name
+        )  # Enter default fit values here
+        study.enqueue_trial(
+            {
+                "sequence_len": 10,
+                "batch_size": 512,
+                "kernel_size": 5,
+                "out_channels": 32,
+                "weight_decay": 0,
+                "delta": 0.05,
+            }
+        )
         study.optimize(self.objective, n_trials=1)
-    
 
     def objective(self, trial):
         # Data hyperparameters
-        sequence_len = trial.suggest_categorical('sequence_len', [5, 10, 20, 50])
-        batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512, 1024])
+        sequence_len = trial.suggest_categorical(
+            "sequence_len", [5, 10, 20, 50]
+        )
+        batch_size = trial.suggest_categorical(
+            "batch_size", [64, 128, 256, 512, 1024]
+        )
         # Model hyperparameters
-        kernel_size = trial.suggest_int('kernel_size', 3, sequence_len)
-        out_channels = trial.suggest_categorical('out_channels', [16, 32, 64])
+        kernel_size = trial.suggest_int("kernel_size", 3, sequence_len)
+        out_channels = trial.suggest_categorical("out_channels", [16, 32, 64])
         # Training hyperparameters
-        weight_decay = trial.suggest_categorical("weight_decay",  [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 0])
+        weight_decay = trial.suggest_categorical(
+            "weight_decay", [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 0]
+        )
         delta = trial.suggest_categorical("delta", [0.025, 0.05, 0.1, 0.2])
 
         overrides = {
@@ -40,9 +50,9 @@ class CNNCLI(BaseCLI):
             "kernel_size": kernel_size,
             "out_channels": out_channels,
             "weight_decay": weight_decay,
-            "delta": delta
+            "delta": delta,
         }
-        
+
         if hasattr(self.config, "tune"):
             config = self.config.tune
         else:
@@ -50,15 +60,19 @@ class CNNCLI(BaseCLI):
             delattr(config, "ckpt_path")
 
         cli = CNNCLI(
-            CNNModel, 
+            CNNModel,
             CNNDataModule,
             trainer_class=TuneTrainer,
             run=False,
-            args = config,
+            args=config,
             overrides=overrides,
         )
 
-        cli.trainer.callbacks.append(optuna.integration.PyTorchLightningPruningCallback(trial, monitor="val_loss"))
+        cli.trainer.callbacks.append(
+            optuna.integration.PyTorchLightningPruningCallback(
+                trial, monitor="val_loss"
+            )
+        )
         cli.trainer.fit(model=cli.model, datamodule=cli.datamodule)
 
         # Print the weights and biases

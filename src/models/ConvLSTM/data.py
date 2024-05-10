@@ -5,8 +5,16 @@ from src.misc import load_processed_dataset
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
+
 class ConvLSTMDataModule(L.LightningDataModule):
-    def __init__(self, stock, feature_set, sequence_len, batch_size, target_var="log_return_forecast"):
+    def __init__(
+        self,
+        stock,
+        feature_set,
+        sequence_len,
+        batch_size,
+        target_var="log_return_forecast",
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.stock = stock
@@ -18,7 +26,9 @@ class ConvLSTMDataModule(L.LightningDataModule):
         self.setup()
 
     def setup(self, stage=None):
-        df = load_processed_dataset(self.stock, start_date=f"2004-01-01", end_date="2024-01-01")
+        df = load_processed_dataset(
+            self.stock, start_date=f"2004-01-01", end_date="2024-01-01"
+        )
         drop_cols = [c for c in df.columns if "forecast" in c.lower()]
         X = df.drop(drop_cols, axis=1)[self.feature_set]
         y = df[self.target_var].to_frame()
@@ -29,8 +39,16 @@ class ConvLSTMDataModule(L.LightningDataModule):
         X, y = X.loc[common_index], y.loc[common_index]
 
         # Splitting
-        X_train, X_val, X_test = X[:"2022-01-01"], X["2022-01-01":"2023-01-01"], X["2023-01-01":]
-        y_train, y_val, y_test = y[:"2022-01-01"], y["2022-01-01":"2023-01-01"], y["2023-01-01":]
+        X_train, X_val, X_test = (
+            X[:"2022-01-01"],
+            X["2022-01-01":"2023-01-01"],
+            X["2023-01-01":],
+        )
+        y_train, y_val, y_test = (
+            y[:"2022-01-01"],
+            y["2022-01-01":"2023-01-01"],
+            y["2023-01-01":],
+        )
 
         # Standardisation
         input_scaler = StandardScaler()
@@ -43,20 +61,29 @@ class ConvLSTMDataModule(L.LightningDataModule):
         X_val = X_val.reshape(-1, len(self.feature_set), self.sequence_len)
         X_test = X_test.reshape(-1, len(self.feature_set), self.sequence_len)
 
-        self.train_dataset = TensorDataset(torch.tensor(X_train).float(), torch.tensor(y_train.values).float())
-        self.val_dataset = TensorDataset(torch.tensor(X_val).float(), torch.tensor(y_val.values).float())
-        self.test_dataset = TensorDataset(torch.tensor(X_test).float(), torch.tensor(y_test.values).float())
+        self.train_dataset = TensorDataset(
+            torch.tensor(X_train).float(), torch.tensor(y_train.values).float()
+        )
+        self.val_dataset = TensorDataset(
+            torch.tensor(X_val).float(), torch.tensor(y_val.values).float()
+        )
+        self.test_dataset = TensorDataset(
+            torch.tensor(X_test).float(), torch.tensor(y_test.values).float()
+        )
 
     def get_permuted_test_set(self, feature_index):
-        X_test, y_test= self.test_dataset.tensors
+        X_test, y_test = self.test_dataset.tensors
         permuted_indices = torch.randperm(X_test.size(0))
         permuted_feature = X_test[:, feature_index, :][permuted_indices]
-        X_test[:, feature_index,:] = 0
-        return DataLoader(TensorDataset(X_test, y_test), batch_size=self.batch_size)
-
+        X_test[:, feature_index, :] = 0
+        return DataLoader(
+            TensorDataset(X_test, y_test), batch_size=self.batch_size
+        )
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.train_dataset, batch_size=self.batch_size, shuffle=True
+        )
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)
@@ -66,8 +93,10 @@ class ConvLSTMDataModule(L.LightningDataModule):
 
     def predict_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size)
-        
-    def process_inputs(self, data: pd.DataFrame, sequence_len: int) -> pd.DataFrame:
+
+    def process_inputs(
+        self, data: pd.DataFrame, sequence_len: int
+    ) -> pd.DataFrame:
         """
         :param data: unsequenced data
         :param sequence_len: length of the sequences to generate for each day
@@ -78,7 +107,9 @@ class ConvLSTMDataModule(L.LightningDataModule):
         df = []
         for i in range(sequence_len):
             shifted_df = data.shift(i)
-            columns = pd.MultiIndex.from_tuples([(f'T-{i}', feature) for feature in data.columns])
+            columns = pd.MultiIndex.from_tuples(
+                [(f"T-{i}", feature) for feature in data.columns]
+            )
             shifted_df.columns = columns
             df.append(shifted_df)
         df = pd.concat(reversed(df), axis=1).dropna()
