@@ -1,10 +1,4 @@
 .*
 __pycache__
-mlartifacts
-mlruns
-models
 logs
-tb_logs
-checkpoints
 archive
-lightning_logs
