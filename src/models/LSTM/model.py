@@ -22,7 +22,9 @@ class LSTMModel(L.LightningModule):
             64, sequence_len, input_dim
         )  # (num_samples, seq_len, n_features)
 
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(
+            input_dim, hidden_dim, num_layers, batch_first=True
+        )
         self.fc = nn.Linear(hidden_dim, output_dim, bias=False)
 
         self.criterion = nn.HuberLoss(delta=delta)
@@ -37,7 +39,9 @@ class LSTMModel(L.LightningModule):
         return out
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), weight_decay=self.weight_decay)
+        optimizer = torch.optim.SGD(
+            self.parameters(), weight_decay=self.weight_decay
+        )
         scheduler = torch.optim.lr_scheduler.CyclicLR(
             optimizer, base_lr=1e-8, max_lr=1, step_size_up=50
         )

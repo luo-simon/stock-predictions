@@ -5,6 +5,7 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
 ```
 ├── bash                <- Bash scripts to assist in running batch experiments
 ├── configs             <- Configuration files for experiments
+├── logs                <- Experiment logs
 ├── data
 │   ├── external        <- Data from third party sources.
 │   ├── processed       <- The final, canonical data sets for modeling.
@@ -29,6 +30,7 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
     └── parser.py               <- Argument parser for command line interfaces
 ```
 
+Dataset and log files are not uploaded, but an example experiment log is left in `logs/`.
 
 ## Usage
 
@@ -55,6 +57,16 @@ src.models.MODEL_TYPE.train tune --experiment_name EXP_NAME --stock STOCK --conf
 The *configuration* is a YAML file specifying values for any of the experiments' attributes. Alternatively, any attributes in the YAML file can also be typed directly into the command line.Example configuration files can found in `/config`.
 
 Alternatively, see `/bash` for example helper scripts to run batches of experiments.
+
+## Logging
+
+To all experiments that were run, you can use `optuna-dashboard` to view the experiments in the Optuna database `optuna_studies.db`.
+```optuna-dashboard sqlite://optuna_studies.db```
+
+To view Tensorboard logs, run tensorboard, specifying the log directory.
+```tensorboard --logdir logs```
+
+
 
 ## Dependencies
 - Data

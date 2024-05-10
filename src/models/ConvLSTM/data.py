@@ -76,10 +76,14 @@ class ConvLSTMDataModule(L.LightningDataModule):
         permuted_indices = torch.randperm(X_test.size(0))
         permuted_feature = X_test[:, feature_index, :][permuted_indices]
         X_test[:, feature_index, :] = 0
-        return DataLoader(TensorDataset(X_test, y_test), batch_size=self.batch_size)
+        return DataLoader(
+            TensorDataset(X_test, y_test), batch_size=self.batch_size
+        )
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.train_dataset, batch_size=self.batch_size, shuffle=True
+        )
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)
@@ -90,7 +94,9 @@ class ConvLSTMDataModule(L.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size)
 
-    def process_inputs(self, data: pd.DataFrame, sequence_len: int) -> pd.DataFrame:
+    def process_inputs(
+        self, data: pd.DataFrame, sequence_len: int
+    ) -> pd.DataFrame:
         """
         :param data: unsequenced data
         :param sequence_len: length of the sequences to generate for each day

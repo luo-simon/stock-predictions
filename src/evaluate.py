@@ -72,7 +72,6 @@ def backtest(preds_series, actuals_series, verbose=False):
 
 
 def calculate_future_prices(row, horizon=5):
-    cur_price = row["Close"]
     future_prices = []
     cumsum = 0
     cur_date = row.name
@@ -103,17 +102,23 @@ def predict(trial: optuna.trial.FrozenTrial, stock, feature_set):
     dm = name_map[model_type][1](**data_hparams)
     trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
 
-    data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
+    data = load_processed_dataset(
+        stock, start_date="2022-01-01", end_date="2024-01-01"
+    )
     validation_set = data[:"2023-01-01"]
     test_set = data["2023-01-01":]
 
     val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
     val_preds = torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
-    val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
+    val_preds = pd.Series(
+        val_preds, index=validation_set.index, name="Predictions"
+    )
 
     test_preds = trainer.predict(model, dm)
     test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
-    test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
+    test_preds = pd.Series(
+        test_preds, index=test_set.index, name="Predictions"
+    )
 
     val_df = validation_set.join(val_preds)
     test_df = test_set.join(test_preds)
@@ -194,44 +199,11 @@ def permutation_importance(model_type, stock):
     return df - baseline
 
 
-def predict_permute_feature(trial: optuna.trial.FrozenTrial, feature_to_permute):
-    ckpt = trial.user_attrs["last_ckpt_path"]
-    data_hparams = trial.user_attrs["data_hparams"]
-    model_type = trial.user_attrs["model"]
-
-    name_map = {
-        "CNN": (CNNModel, CNNDataModule),
-        "LSTM": (LSTMModel, LSTMDataModule),
-        "ConvLSTM": (ConvLSTMModel, ConvLSTMDataModule),
-    }
-
-    model = name_map[model_type][0].load_from_checkpoint(ckpt)
-    dm = name_map[model_type][1](**data_hparams)
-    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
-
-    test_set = load_processed_dataset(
-        stock, start_date="2023-01-01", end_date="2024-01-01"
-    )
-
-    test_preds = trainer.predict(model, dm)
-    test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
-    test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
-
-    test_df = test_set.join(test_preds)
-    val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-    test_df = test_df.rename({"log_return_forecast": "Actuals"}, axis=1)
-
-    return (
-        test_df[["Predictions", "Actuals"]],
-        val_df[["Predictions", "Actuals"]],
-    )
-
-
 def get_prediction_dfs_from_experiment(experiment_name, trial_num=None):
     model_type = experiment_name.split("_")[0]
     stock = experiment_name.split("_")[1]
 
-    if trial_num != None:
+    if trial_num is not None:
         trial = load_trial_from_experiment(experiment_name, trial_num)
     else:
         trial = load_best_n_trials_from_experiment(experiment_name, n=1)[0]
@@ -314,7 +286,9 @@ def visualise(preds, actuals):
     hi = preds + interval
     ax.plot(actuals, label="Actual Log Return")
     ax.plot(preds, label="Predicted Log Return", color="orange")
-    ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
+    ax.fill_between(
+        preds.index, lo.values, hi.values, color="orange", alpha=0.2
+    )
     ax.set_xlabel("Date")
     ax.set_ylabel("Log Return")
     ax.set_title("Actual and Predicted Log Return")
@@ -335,7 +309,9 @@ def visualise(preds, actuals):
     )  # 95% of area under a normal curve lives within ~1.95 std devs.
     ax.plot(actuals_price, label="Actual Price")
     ax.plot(preds_price, label="Predicted Price", color="orange")
-    ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
+    ax.fill_between(
+        preds.index, lo.values, hi.values, color="orange", alpha=0.2
+    )
     ax.set_xlabel("Date")
     ax.set_ylabel("Price")
     ax.set_title("Actual and Predicted Price")
@@ -497,115 +473,6 @@ def random_walk(stock, n=1000):
         df["Stock"] = stock
         dfs.append(df)
     return pd.concat(dfs)
-
-
-def evaluate(val_df, test_df, stock):
-    random_df = []
-    fig = plt.figure(figsize=(15, 8))
-    grid = plt.GridSpec(3, 2, hspace=0.4, wspace=0.1)
-    val_ax = plt.subplot(grid[0, 0])
-    test_ax = plt.subplot(grid[0, 1])
-    val_acc_ax = plt.subplot(grid[1, 0])
-    test_acc_ax = plt.subplot(grid[1, 1])
-    axs = [val_ax, test_ax, val_acc_ax, test_acc_ax]
-    titles = ["Validation set", "Test set"]
-    for i, df in enumerate([val_df, test_df]):
-        random_pnls = []
-        random_stds = []
-        random_accs = []
-        for _ in range(10000):
-            random_choice = np.random.choice([-1, 1], size=len(df))
-            pnl, std = backtest(random_choice, df["Actuals"])
-            acc = (np.sign(df["Actuals"]) == random_choice).astype(int).mean() * 100
-            random_pnls.append(pnl)
-            random_stds.append(std)
-            random_accs.append(acc)
-        mean_pnl = np.array(random_pnls).mean()
-        pnl_std = np.array(random_pnls).std()
-        mean_std = np.array(random_stds).mean()
-        mean_acc = np.array(random_accs).mean()
-        acc_std = np.array(random_accs).std()
-        random_df.append([mean_pnl, pnl_std, mean_std, mean_acc, acc_std])
-
-        # Plot
-        sns.histplot(
-            random_pnls,
-            kde=True,
-            ax=axs[i],
-            stat="density",
-            alpha=0.2,
-            bins=30,
-        )
-        xmin, xmax = axs[i].get_xlim()
-        x = np.linspace(xmin, xmax, 100)
-        p = stats.norm.pdf(x, np.mean(random_pnls), np.std(random_pnls))
-        axs[i].plot(
-            x,
-            p,
-            "k",
-            linewidth=1,
-            label="Normal Distribution",
-            linestyle="dashed",
-        )
-        axs[i].set_title(f"{titles[i]} Distribution of PnLs for Random Walk")
-        axs[i].set_xlabel("PnL")
-        axs[i].set_ylabel("Density")
-        model_pnl = trading_df.loc[(titles[i], "Model"), "PnL"]
-        axs[i].axvline(x=model_pnl, color="r", label="Model PnL", linewidth=2)
-        buy_hold_pnl = trading_df.loc[(titles[i], "Buy-and-hold"), "PnL"]
-        axs[i].axvline(x=buy_hold_pnl, color="g", label="Buy-and-hold PnL", linewidth=2)
-        axs[i].legend()
-        ci_high = stats.norm.ppf(0.95, np.mean(random_pnls), np.std(random_pnls))
-        axs[i].fill_between(x, p, where=(x >= ci_high), color="gray", alpha=0.5)
-        axs[i].axvline(ci_high, color="gray", linestyle="--")
-
-        sns.histplot(
-            random_accs,
-            kde=True,
-            ax=axs[i + 2],
-            stat="density",
-            alpha=0.2,
-            bins=30,
-        )
-        xmin, xmax = axs[i + 2].get_xlim()
-        x = np.linspace(xmin, xmax, 100)
-        p = stats.norm.pdf(x, np.mean(random_accs), np.std(random_accs))
-        axs[i + 2].plot(
-            x,
-            p,
-            "k",
-            linewidth=1,
-            label="Normal Distribution",
-            linestyle="dashed",
-        )
-        axs[i + 2].set_title(f"{titles[i]} Distribution of Accuracies for Random Walk")
-        axs[i + 2].set_xlabel("Accuracy")
-        axs[i + 2].set_ylabel("Density")
-        model_acc = trading_df.loc[(titles[i], "Model"), "Accuracy"]
-        axs[i + 2].axvline(x=model_acc, color="r", label="Model Accuracy", linewidth=2)
-        buy_hold_acc = trading_df.loc[(titles[i], "Buy-and-hold"), "Accuracy"]
-        axs[i + 2].axvline(
-            x=buy_hold_acc,
-            color="g",
-            label="Buy-and-hold Accuracy",
-            linewidth=2,
-        )
-        axs[i + 2].legend()
-        ci_high = stats.norm.ppf(0.95, np.mean(random_accs), np.std(random_accs))
-        axs[i + 2].fill_between(x, p, where=(x >= ci_high), color="gray", alpha=0.5)
-        axs[i + 2].axvline(ci_high, color="gray", linestyle="--")
-
-    random_df = pd.DataFrame(
-        random_df,
-        index=["Validation set", "Test set"],
-        columns=[
-            "Mean PnL",
-            "PnL Std.",
-            "Mean Returns Std.",
-            "Mean Accuracy",
-            "Accuracy Std",
-        ],
-    )
 
 
 if __name__ == "__main__":

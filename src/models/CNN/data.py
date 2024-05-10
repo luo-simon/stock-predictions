@@ -80,10 +80,14 @@ class CNNDataModule(L.LightningDataModule):
         permuted_indices = torch.randperm(X_test.size(0))
         permuted_feature = X_test[:, feature_index, :][permuted_indices]
         X_test[:, feature_index, :] = 0
-        return DataLoader(TensorDataset(X_test, y_test), batch_size=self.batch_size)
+        return DataLoader(
+            TensorDataset(X_test, y_test), batch_size=self.batch_size
+        )
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.train_dataset, batch_size=self.batch_size, shuffle=True
+        )
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)
@@ -94,7 +98,9 @@ class CNNDataModule(L.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size)
 
-    def process_inputs(self, data: pd.DataFrame, sequence_len: int) -> pd.DataFrame:
+    def process_inputs(
+        self, data: pd.DataFrame, sequence_len: int
+    ) -> pd.DataFrame:
         """
         :param data: unsequenced data
         :param sequence_len: length of the sequences to generate for each day
@@ -110,7 +116,9 @@ class CNNDataModule(L.LightningDataModule):
                 shifted_series = data[f].shift(i).rename(f"T-{i}")
                 feature_df.append(shifted_series)
             feature_df = pd.concat(reversed(feature_df), axis=1).dropna()
-            feature_df.columns = pd.MultiIndex.from_product([[f], feature_df.columns])
+            feature_df.columns = pd.MultiIndex.from_product(
+                [[f], feature_df.columns]
+            )
             df.append(feature_df)
         df = pd.concat(df, axis=1)
         return df

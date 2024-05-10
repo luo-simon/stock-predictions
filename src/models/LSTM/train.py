@@ -29,8 +29,12 @@ class LSTMCLI(BaseCLI):
 
     def objective(self, trial):
         # Data hyperparameters
-        sequence_len = trial.suggest_categorical("sequence_len", [5, 10, 20, 50])
-        batch_size = trial.suggest_categorical("batch_size", [64, 128, 256, 512, 1024])
+        sequence_len = trial.suggest_categorical(
+            "sequence_len", [5, 10, 20, 50]
+        )
+        batch_size = trial.suggest_categorical(
+            "batch_size", [64, 128, 256, 512, 1024]
+        )
         # Model hyperparameters
         hidden_dim = trial.suggest_categorical("hidden_dim", [2, 4, 8])
         num_layers = trial.suggest_categorical("num_layers", [1, 2, 4])

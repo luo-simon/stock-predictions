@@ -56,7 +56,9 @@ class ConvLSTMModel(L.LightningModule):
         return x
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), weight_decay=self.weight_decay)
+        optimizer = torch.optim.SGD(
+            self.parameters(), weight_decay=self.weight_decay
+        )
         scheduler = torch.optim.lr_scheduler.CyclicLR(
             optimizer, base_lr=1e-8, max_lr=1, step_size_up=50
         )

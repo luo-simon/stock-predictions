@@ -30,7 +30,9 @@ class BaseCLI(LightningCLI):
             help="Experiment name",
             required=True,
         )
-        parser.add_argument("--stock", type=str, help="Stock dataset", required=True)
+        parser.add_argument(
+            "--stock", type=str, help="Stock dataset", required=True
+        )
         default_feature_set = [
             "log_return",
             "log_return_open",
@@ -71,7 +73,9 @@ class BaseCLI(LightningCLI):
             default=0,
         )
 
-        parser.link_arguments("experiment_name", "trainer.logger.init_args.name")
+        parser.link_arguments(
+            "experiment_name", "trainer.logger.init_args.name"
+        )
         parser.link_arguments("stock", "data.stock")
         parser.link_arguments("features", "data.feature_set")
 
@@ -111,5 +115,7 @@ class BaseCLI(LightningCLI):
         )
         params_str = "".join(f"\n\t- {k}: {v}" for k, v in best.params.items())
         print(f"Sampled parameters were {params_str}")
-        user_attrs_str = "".join(f"\n\t- {k}: {v}" for k, v in best.user_attrs.items())
+        user_attrs_str = "".join(
+            f"\n\t- {k}: {v}" for k, v in best.user_attrs.items()
+        )
         print(f"User attributes: {user_attrs_str}")
