@@ -18,9 +18,7 @@ warnings.filterwarnings(
 
 
 def data(stock, feature_set):
-    df = load_processed_dataset(
-        stock, start_date=f"2004-01-01", end_date="2024-01-01"
-    )
+    df = load_processed_dataset(stock, start_date=f"2004-01-01", end_date="2024-01-01")
     endog = df["log_return"].to_period("D")
     exog = df[feature_set].drop(columns=["log_return"]).to_period("D")
     y = df["log_return_forecast"]
@@ -51,9 +49,7 @@ def predict(stock, feature_set, p, q):
     res = model.filter(fitted_model.params)
     predict = res.get_prediction()
     predict_ci = predict.conf_int()
-    preds = pd.Series(
-        predict.predicted_mean.values, name="Predictions", index=y.index
-    )
+    preds = pd.Series(predict.predicted_mean.values, name="Predictions", index=y.index)
     df = pd.DataFrame(data={"Predictions": preds, "Actuals": y})
 
     return df["2022-01-01":"2023-01-01"], df["2023-01-01":"2024-01-01"]
@@ -65,9 +61,7 @@ def objective(trial, args: Namespace):
     q = trial.suggest_int("q", 0, 20)
     val_df, test_df = predict(args.stock, args.features, p, q)
     trial.set_user_attr("config", str(vars(args)))
-    return compute_accuracy(
-        val_df["Predictions"], y["2022-01-01":"2023-01-01"]
-    )
+    return compute_accuracy(val_df["Predictions"], y["2022-01-01":"2023-01-01"])
 
 
 if __name__ == "__main__":

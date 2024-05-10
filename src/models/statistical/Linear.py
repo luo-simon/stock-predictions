@@ -11,9 +11,7 @@ np.random.seed(42)
 
 
 def data(stock, feature_set):
-    df = load_processed_dataset(
-        stock, start_date=f"2004-01-01", end_date="2024-01-01"
-    )
+    df = load_processed_dataset(stock, start_date=f"2004-01-01", end_date="2024-01-01")
     drop_cols = [c for c in df.columns if "forecast" in c.lower()]
     X = df.drop(drop_cols, axis=1)[feature_set]
     y = df["log_return_forecast"]
@@ -55,8 +53,6 @@ if __name__ == "__main__":
     parser, parser_fit, parser_tune = get_parser()
     args = parser.parse_args()
 
-    fixed_objective = partial(
-        objective, stock=args.stock, feature_set=args.features
-    )
+    fixed_objective = partial(objective, stock=args.stock, feature_set=args.features)
     study = get_study(experiment_name=args.experiment_name)
     study.optimize(fixed_objective, n_trials=1)

@@ -86,9 +86,7 @@ class LSTMDataModule(L.LightningDataModule):
         X_test[:, feature_index, :] = 0
         X_test = X_test.permute(0, 2, 1)
         assert X_test.shape[1:] == (self.sequence_len, len(self.feature_set))
-        return DataLoader(
-            TensorDataset(X_test, y_test), batch_size=self.batch_size
-        )
+        return DataLoader(TensorDataset(X_test, y_test), batch_size=self.batch_size)
 
     def sequence(
         self, data: pd.DataFrame, sequence_len: int, ahead=False
@@ -115,9 +113,7 @@ class LSTMDataModule(L.LightningDataModule):
         return df
 
     def train_dataloader(self):
-        return DataLoader(
-            self.train_dataset, batch_size=self.batch_size, shuffle=True
-        )
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)

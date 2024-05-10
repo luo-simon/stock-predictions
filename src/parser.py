@@ -14,9 +14,7 @@ def get_parser(default_config=""):
     parser.add_argument(
         "--experiment_name", type=str, help="Experiment name", required=True
     )
-    parser.add_argument(
-        "--stock", type=str, help="Stock dataset", required=True
-    )
+    parser.add_argument("--stock", type=str, help="Stock dataset", required=True)
     default_feature_set = [
         "log_return",
         "log_return_open",

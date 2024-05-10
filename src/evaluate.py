@@ -103,23 +103,17 @@ def predict(trial: optuna.trial.FrozenTrial, stock, feature_set):
     dm = name_map[model_type][1](**data_hparams)
     trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
 
-    data = load_processed_dataset(
-        stock, start_date="2022-01-01", end_date="2024-01-01"
-    )
+    data = load_processed_dataset(stock, start_date="2022-01-01", end_date="2024-01-01")
     validation_set = data[:"2023-01-01"]
     test_set = data["2023-01-01":]
 
     val_preds = trainer.predict(model, dataloaders=dm.val_dataloader())
     val_preds = torch.cat(val_preds, dim=0).squeeze().cpu().detach().numpy()
-    val_preds = pd.Series(
-        val_preds, index=validation_set.index, name="Predictions"
-    )
+    val_preds = pd.Series(val_preds, index=validation_set.index, name="Predictions")
 
     test_preds = trainer.predict(model, dm)
     test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
-    test_preds = pd.Series(
-        test_preds, index=test_set.index, name="Predictions"
-    )
+    test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
 
     val_df = validation_set.join(val_preds)
     test_df = test_set.join(test_preds)
@@ -200,9 +194,7 @@ def permutation_importance(model_type, stock):
     return df - baseline
 
 
-def predict_permute_feature(
-    trial: optuna.trial.FrozenTrial, feature_to_permute
-):
+def predict_permute_feature(trial: optuna.trial.FrozenTrial, feature_to_permute):
     ckpt = trial.user_attrs["last_ckpt_path"]
     data_hparams = trial.user_attrs["data_hparams"]
     model_type = trial.user_attrs["model"]
@@ -223,9 +215,7 @@ def predict_permute_feature(
 
     test_preds = trainer.predict(model, dm)
     test_preds = torch.cat(test_preds, dim=0).squeeze().cpu().detach().numpy()
-    test_preds = pd.Series(
-        test_preds, index=test_set.index, name="Predictions"
-    )
+    test_preds = pd.Series(test_preds, index=test_set.index, name="Predictions")
 
     test_df = test_set.join(test_preds)
     val_df = val_df.rename({"log_return_forecast": "Actuals"}, axis=1)
@@ -324,9 +314,7 @@ def visualise(preds, actuals):
     hi = preds + interval
     ax.plot(actuals, label="Actual Log Return")
     ax.plot(preds, label="Predicted Log Return", color="orange")
-    ax.fill_between(
-        preds.index, lo.values, hi.values, color="orange", alpha=0.2
-    )
+    ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
     ax.set_xlabel("Date")
     ax.set_ylabel("Log Return")
     ax.set_title("Actual and Predicted Log Return")
@@ -347,9 +335,7 @@ def visualise(preds, actuals):
     )  # 95% of area under a normal curve lives within ~1.95 std devs.
     ax.plot(actuals_price, label="Actual Price")
     ax.plot(preds_price, label="Predicted Price", color="orange")
-    ax.fill_between(
-        preds.index, lo.values, hi.values, color="orange", alpha=0.2
-    )
+    ax.fill_between(preds.index, lo.values, hi.values, color="orange", alpha=0.2)
     ax.set_xlabel("Date")
     ax.set_ylabel("Price")
     ax.set_title("Actual and Predicted Price")
@@ -530,9 +516,7 @@ def evaluate(val_df, test_df, stock):
         for _ in range(10000):
             random_choice = np.random.choice([-1, 1], size=len(df))
             pnl, std = backtest(random_choice, df["Actuals"])
-            acc = (np.sign(df["Actuals"]) == random_choice).astype(
-                int
-            ).mean() * 100
+            acc = (np.sign(df["Actuals"]) == random_choice).astype(int).mean() * 100
             random_pnls.append(pnl)
             random_stds.append(std)
             random_accs.append(acc)
@@ -569,16 +553,10 @@ def evaluate(val_df, test_df, stock):
         model_pnl = trading_df.loc[(titles[i], "Model"), "PnL"]
         axs[i].axvline(x=model_pnl, color="r", label="Model PnL", linewidth=2)
         buy_hold_pnl = trading_df.loc[(titles[i], "Buy-and-hold"), "PnL"]
-        axs[i].axvline(
-            x=buy_hold_pnl, color="g", label="Buy-and-hold PnL", linewidth=2
-        )
+        axs[i].axvline(x=buy_hold_pnl, color="g", label="Buy-and-hold PnL", linewidth=2)
         axs[i].legend()
-        ci_high = stats.norm.ppf(
-            0.95, np.mean(random_pnls), np.std(random_pnls)
-        )
-        axs[i].fill_between(
-            x, p, where=(x >= ci_high), color="gray", alpha=0.5
-        )
+        ci_high = stats.norm.ppf(0.95, np.mean(random_pnls), np.std(random_pnls))
+        axs[i].fill_between(x, p, where=(x >= ci_high), color="gray", alpha=0.5)
         axs[i].axvline(ci_high, color="gray", linestyle="--")
 
         sns.histplot(
@@ -600,15 +578,11 @@ def evaluate(val_df, test_df, stock):
             label="Normal Distribution",
             linestyle="dashed",
         )
-        axs[i + 2].set_title(
-            f"{titles[i]} Distribution of Accuracies for Random Walk"
-        )
+        axs[i + 2].set_title(f"{titles[i]} Distribution of Accuracies for Random Walk")
         axs[i + 2].set_xlabel("Accuracy")
         axs[i + 2].set_ylabel("Density")
         model_acc = trading_df.loc[(titles[i], "Model"), "Accuracy"]
-        axs[i + 2].axvline(
-            x=model_acc, color="r", label="Model Accuracy", linewidth=2
-        )
+        axs[i + 2].axvline(x=model_acc, color="r", label="Model Accuracy", linewidth=2)
         buy_hold_acc = trading_df.loc[(titles[i], "Buy-and-hold"), "Accuracy"]
         axs[i + 2].axvline(
             x=buy_hold_acc,
@@ -617,12 +591,8 @@ def evaluate(val_df, test_df, stock):
             linewidth=2,
         )
         axs[i + 2].legend()
-        ci_high = stats.norm.ppf(
-            0.95, np.mean(random_accs), np.std(random_accs)
-        )
-        axs[i + 2].fill_between(
-            x, p, where=(x >= ci_high), color="gray", alpha=0.5
-        )
+        ci_high = stats.norm.ppf(0.95, np.mean(random_accs), np.std(random_accs))
+        axs[i + 2].fill_between(x, p, where=(x >= ci_high), color="gray", alpha=0.5)
         axs[i + 2].axvline(ci_high, color="gray", linestyle="--")
 
     random_df = pd.DataFrame(

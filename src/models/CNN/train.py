@@ -29,12 +29,8 @@ class CNNCLI(BaseCLI):
 
     def objective(self, trial):
         # Data hyperparameters
-        sequence_len = trial.suggest_categorical(
-            "sequence_len", [5, 10, 20, 50]
-        )
-        batch_size = trial.suggest_categorical(
-            "batch_size", [64, 128, 256, 512, 1024]
-        )
+        sequence_len = trial.suggest_categorical("sequence_len", [5, 10, 20, 50])
+        batch_size = trial.suggest_categorical("batch_size", [64, 128, 256, 512, 1024])
         # Model hyperparameters
         kernel_size = trial.suggest_int("kernel_size", 3, sequence_len)
         out_channels = trial.suggest_categorical("out_channels", [16, 32, 64])
