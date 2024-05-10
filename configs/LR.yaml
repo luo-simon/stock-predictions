@@ -1,5 +1,3 @@
 experiment_name: Linear_NVDA
 stock: NVDA
-# features:
-# - log_return
 subcommand: fit

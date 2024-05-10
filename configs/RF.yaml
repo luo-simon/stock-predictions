@@ -1,7 +1,5 @@
 experiment_name: RF_LHX
 stock: LHX
-# features:
-# - log_return
 subcommand: fit
 fit:
   n_estimators: 500
