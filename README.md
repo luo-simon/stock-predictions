@@ -32,7 +32,7 @@ File structure adapted from *https://drivendata.github.io/cookiecutter-data-scie
 
 ## Usage
 
-First, ensure data is downloaded and processed by running `accses` and `assess`.
+First, ensure data is downloaded and processed by running `access` and `assess`.
 ```
 src.data.access -t STOCK
 src.data.assess
