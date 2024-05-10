@@ -1,6 +1,0 @@
-sequence_len: 10
-in_channels: 25
-out_channels: 16
-kernel_size: 8
-weight_decay: 1.0e-05
-delta: 0.2
