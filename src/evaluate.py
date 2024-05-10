@@ -100,7 +100,7 @@ def predict(trial: optuna.trial.FrozenTrial, stock, feature_set):
 
     model = name_map[model_type][0].load_from_checkpoint(ckpt)
     dm = name_map[model_type][1](**data_hparams)
-    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
+    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False, logger=False)
 
     data = load_processed_dataset(
         stock, start_date="2022-01-01", end_date="2024-01-01"
@@ -147,7 +147,7 @@ def permutation_importance(model_type, stock):
 
     model = name_map[model_type][0].load_from_checkpoint(ckpt)
     dm = name_map[model_type][1](**data_hparams)
-    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False)
+    trainer = Trainer(enable_progress_bar=False, enable_model_summary=False, logger=False)
 
     y_test = load_processed_dataset(
         stock, start_date="2023-01-01", end_date="2024-01-01"

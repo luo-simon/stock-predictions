@@ -58,6 +58,12 @@ The *configuration* is a YAML file specifying values for any of the experiments'
 
 Alternatively, see `/bash` for example helper scripts to run batches of experiments.
 
+To evaluate, run the evaluation model:
+```
+src.evaluate -n EXP_NAME
+```
+For example, try the experiment name CNN_JPM, LSTM_NVDA, Linear_HD etc.
+
 ## Logging
 
 To all experiments that were run, you can use `optuna-dashboard` to view the experiments in the Optuna database `optuna_studies.db`.
